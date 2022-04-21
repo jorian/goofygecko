@@ -1,8 +1,9 @@
 use color_eyre::Report;
 use load_dotenv::load_dotenv;
+use sqlx::PgPool;
 use tracing::{debug, error, info};
 use tracing_subscriber::filter::EnvFilter;
-// use serenity::async_trait;
+
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler},
@@ -12,7 +13,16 @@ use serenity::{
     },
     model::channel::Message,
     model::gateway::Ready,
+    prelude::TypeMapKey,
 };
+
+pub mod utils;
+
+pub struct DatabasePool;
+
+impl TypeMapKey for DatabasePool {
+    type Value = PgPool;
+}
 
 #[group]
 #[commands(ping)]
@@ -28,11 +38,12 @@ impl EventHandler for Handler {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Report> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     load_dotenv!();
 
     setup_logging().await?;
 
+    dbg!(&std::env::var("DISCORD_TOKEN"));
 
     let framework = StandardFramework::new()
         .configure(|c| c.prefix("!")) // set the bot's prefix to "!"
@@ -40,13 +51,33 @@ async fn main() -> Result<(), Report> {
         .group(&GENERAL_GROUP);
 
     let token = env!("DISCORD_TOKEN");
+    dbg!(&token);
     let mut client = Client::builder(token)
         .event_handler(Handler)
         .framework(framework)
         .await
         .expect("Error creating discord bot client");
 
+    {
+        // in a block to close the write borrow
+        let mut data = client.data.write().await;
+
+        let pg_pool = utils::database::obtain_postgres_pool().await?;
+        data.insert::<DatabasePool>(pg_pool.clone());
+
+        // sqlx::query!("INSERT INTO test (id) VALUES ($1)", 3)
+        //     .execute(&pg_pool)
+        //     .await?;
+
+        let id = sqlx::query!("SELECT id FROM test")
+            .fetch_all(&pg_pool)
+            .await?;
+
+        dbg!(id);
+    }
+
     debug!("starting client");
+
     if let Err(why) = client.start().await {
         println!(
             "An error occurred while running the discord bot client: {:?}",
