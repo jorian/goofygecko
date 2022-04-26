@@ -10,7 +10,7 @@ name = "verusnft"
 path = "src/main.rs"
 
 [lib]
-name = "verusnft"
+name = "verusnftlib"
 path = "src/lib.rs"
 
 [dependencies]

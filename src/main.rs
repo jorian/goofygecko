@@ -1,4 +1,4 @@
-extern crate verusnft;
+extern crate verusnftlib;
 
 use color_eyre::Report;
 use load_dotenv::load_dotenv;
@@ -7,22 +7,16 @@ use tracing::{debug, error, info};
 use tracing_subscriber::filter::EnvFilter;
 
 use serenity::{
-    async_trait,
-    client::{Client, Context, EventHandler},
+    client::{bridge::gateway::GatewayIntents, Client, Context},
     framework::standard::{
         macros::{command, group, hook},
         CommandResult, DispatchError, StandardFramework,
     },
     model::channel::Message,
-    model::gateway::Ready,
     prelude::TypeMapKey,
 };
 
-// use verusnft::bot::utils;
-
-use verusnft::bot::utils;
-
-// pub mod utils;
+use verusnftlib::bot::{events, utils};
 
 pub struct DatabasePool;
 
@@ -34,22 +28,11 @@ impl TypeMapKey for DatabasePool {
 #[commands(ping)]
 struct General;
 
-struct Handler;
-
-#[async_trait]
-impl EventHandler for Handler {
-    async fn ready(&self, _ctx: Context, ready: Ready) {
-        info!("{} is connected!", ready.user.name);
-    }
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     load_dotenv!();
 
     setup_logging().await?;
-
-    dbg!(&std::env::var("DISCORD_TOKEN"));
 
     let framework = StandardFramework::new()
         .configure(|c| c.prefix("!")) // set the bot's prefix to "!"
@@ -59,8 +42,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let token = env!("DISCORD_TOKEN");
     dbg!(&token);
     let mut client = Client::builder(token)
-        .event_handler(Handler)
+        .event_handler(events::Handler {})
         .framework(framework)
+        .intents({
+            let mut intents = GatewayIntents::all();
+            intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
+            intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
+
+            intents
+        })
         .await
         .expect("Error creating discord bot client");
 
