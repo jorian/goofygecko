@@ -60,16 +60,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         let pg_pool = utils::database::obtain_postgres_pool().await?;
         data.insert::<DatabasePool>(pg_pool.clone());
-
-        // sqlx::query!("INSERT INTO test (id) VALUES ($1)", 3)
-        //     .execute(&pg_pool)
-        //     .await?;
-
-        let id = sqlx::query!("SELECT id FROM test")
-            .fetch_all(&pg_pool)
-            .await?;
-
-        dbg!(id);
     }
 
     debug!("starting client");
