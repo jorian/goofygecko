@@ -2,7 +2,6 @@ extern crate verusnftlib;
 
 use color_eyre::Report;
 use load_dotenv::load_dotenv;
-use sqlx::PgPool;
 use tracing::{debug, error, info};
 use tracing_subscriber::filter::EnvFilter;
 
@@ -13,16 +12,9 @@ use serenity::{
         CommandResult, DispatchError, StandardFramework,
     },
     model::channel::Message,
-    prelude::TypeMapKey,
 };
 
-use verusnftlib::bot::{events, utils};
-
-pub struct DatabasePool;
-
-impl TypeMapKey for DatabasePool {
-    type Value = PgPool;
-}
+use verusnftlib::bot::{events, utils, utils::database::DatabasePool};
 
 #[group]
 #[commands(ping)]

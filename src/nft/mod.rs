@@ -13,7 +13,7 @@ use tracing::log::error;
 mod art;
 mod arweave;
 mod config;
-mod metadata;
+pub(crate) mod metadata;
 
 pub struct NFTMetadataBuilder {
     assets_directory: PathBuf,

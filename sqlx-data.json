@@ -1,3 +1,35 @@
 {
-  "db": "PostgreSQL"
+  "db": "PostgreSQL",
+  "a5728f6c0aa84871daf48634bb50d24f0144df7ca084b78f8848a103ba191e09": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "INSERT INTO user_register (discord_user_id) VALUES ($1)"
+  },
+  "e0aa9543938bdcc0eb3b2bf571137726c0a6ebb3e64a3a612e976b4a7cb64635": {
+    "describe": {
+      "columns": [
+        {
+          "name": "discord_user_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT discord_user_id FROM user_register WHERE discord_user_id = $1"
+  }
 }

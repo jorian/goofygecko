@@ -1,5 +1,12 @@
 use load_dotenv::load_dotenv;
+use serenity::prelude::TypeMapKey;
 use sqlx::postgres::PgPool;
+
+pub struct DatabasePool;
+
+impl TypeMapKey for DatabasePool {
+    type Value = PgPool;
+}
 
 // This function obtains a database connection to the postgresql database used for the bot.
 pub async fn obtain_postgres_pool() -> Result<PgPool, Box<dyn std::error::Error + Send + Sync>> {
