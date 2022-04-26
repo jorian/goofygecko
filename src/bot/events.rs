@@ -15,6 +15,8 @@ impl EventHandler for Handler {
             "A new member joined the discord with user_id {} and discriminant {}",
             new_member.user.id.0, new_member.user.discriminator
         );
+
+        // TODO need to keep a record of users that entered.
     }
 
     async fn ready(&self, _ctx: Context, ready: Ready) {
