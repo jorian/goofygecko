@@ -1,0 +1,41 @@
+{
+  "name": "NFT Title",
+  "symbol": "SNFT",
+  "description": "Hello, NFT!",
+  "externalUrl": "https://example.com",
+  "creators": [
+    { "address": "BPr18DCdtzASf1YVbUVZ4dZ7mA6jpMYZSUP3YuiMgGeD", "share": 100 }
+  ],
+  "royaltyPercentage": 10,
+  "collection": { "name": "NFT Collection", "family": "NFT Family" },
+  "attributes": {
+    "_alchemist": {
+      "alchemist": 0.54,
+      "non-alchemist": 0.46
+    },
+    "background": {
+      "blue.png": 0.04,
+      "brown.png": 0.04
+    },
+    "face": {
+      "cyan-face.png": 0.07,
+      "dark-green-face.png": 0.04,
+      "_alchemist:alchemist": {
+        "alchemist-face.png": 1.0
+      }
+    },
+    "eyes": {
+      "egg-eyes.png": 0.3,
+      "heart-eyes.png": 0.12,
+      "square-eyes.png": 0.02
+    },
+    "mouth": {
+      "block-mouth.png": 0.23,
+      "smile-mouth.png": 0.09
+    }
+  },
+  "guaranteedAttributeRolls": [
+    ["alchemist", "blue", "cyan-face", "square-eyes", "smile-mouth"]
+  ],
+  "amount": 20
+}

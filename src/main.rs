@@ -1,3 +1,5 @@
+extern crate verusnft;
+
 use color_eyre::Report;
 use load_dotenv::load_dotenv;
 use sqlx::PgPool;
@@ -16,7 +18,11 @@ use serenity::{
     prelude::TypeMapKey,
 };
 
-pub mod utils;
+// use verusnft::bot::utils;
+
+use verusnft::bot::utils;
+
+// pub mod utils;
 
 pub struct DatabasePool;
 
