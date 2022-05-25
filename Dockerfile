@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . .
 
 ENV SQLX_OFFLINE true
-RUN cargo build --release
+RUN cargo build --release --bin verusnft
 
 ENV DATABASE_URL postgres://postgres:password@localhost:5432/test0
 ENV DATABASE_URL2 postgres://postgres:password@localhost:5432/test0

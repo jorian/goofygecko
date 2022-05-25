@@ -8,6 +8,7 @@ Then we need to setup postgresql for the database.
 
 At this point we need the DATABASE_URL to be set:  
 `DATABASE_URL=<url>`  
+`DATABASE_URL2=<url>`  
 `sqlx database create`  
 `cargo sqlx migrate run`
 
