@@ -16,7 +16,7 @@ pub async fn obtain_postgres_pool() -> Result<PgPool, Box<dyn std::error::Error 
 
     // Connect to the database with the information provided on the configuration.
     // and return a pool of connections
-    let pool = PgPool::connect_lazy(&pg_url)?;
+    let pool = PgPool::connect_lazy(pg_url)?;
     // let pool = PgPoolOptions::new()
     //     .max_connections(20)
     //     .connect_lazy(&pg_url)?;

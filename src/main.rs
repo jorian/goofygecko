@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut data = client.data.write().await;
 
         let pg_pool = utils::database::obtain_postgres_pool().await?;
-        data.insert::<DatabasePool>(pg_pool.clone());
+        data.insert::<DatabasePool>(pg_pool);
     }
 
     debug!("starting client");
@@ -98,7 +98,7 @@ pub async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchErro
         DispatchError::OnlyForDM => {
             info!("Only in DM");
             let _ = msg
-                .reply(ctx, format!("This can only be done in DM with this bot"))
+                .reply(ctx, "This can only be done in DM with this bot")
                 .await;
         }
         _ => {
