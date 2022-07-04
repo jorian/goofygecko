@@ -6,9 +6,9 @@ Is concerned with:
 - rarity generator based on discord id
  */
 
-use std::path::{Path, PathBuf};
+// use std::path::{Path, PathBuf};
 
-use tracing::log::error;
+// use tracing::log::error;
 
 pub(crate) mod art;
 mod arweave;

@@ -8,11 +8,7 @@ use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand_pcg::{Lcg64Xsh32, Pcg32};
 use serde::{Deserialize, Serialize};
-use std::{
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, io::Write, path::Path};
 
 pub fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
 {

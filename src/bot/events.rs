@@ -1,13 +1,11 @@
+use std::path::Path;
 use std::path::PathBuf;
-use std::str::FromStr;
-use std::{path::Path, time::Duration};
 
 use serenity::{
     async_trait,
     model::{guild::Member, id::GuildId, prelude::Ready},
     prelude::{Context, EventHandler},
 };
-use tokio::time::sleep;
 use tracing::{debug, error, info};
 
 use crate::bot::utils::database::DatabasePool;
