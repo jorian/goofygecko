@@ -2,12 +2,12 @@
 
 use std::path::Path;
 
-use crate::nft::NFTMetadata;
+// use crate::nft::NFTMetadata;
 
 pub fn upload_image(image_location: &Path) -> Result<String, ()> {
     Ok(String::new())
 }
 
-pub fn upload_metadata(metadata: &NFTMetadata) -> Result<(), ()> {
-    Ok(())
-}
+// pub fn upload_metadata(metadata: &NFTMetadata) -> Result<(), ()> {
+//     Ok(())
+// }
