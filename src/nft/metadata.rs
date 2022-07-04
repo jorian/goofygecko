@@ -6,6 +6,7 @@ use super::config::{self, Attribute};
 use indexmap::IndexMap;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
+use rand_pcg::{Lcg64Xsh32, Pcg32};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -29,7 +30,7 @@ pub fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
 
 fn generate_attributes(user_id: u64, config: &config::Config, output_directory: &Path) {
     let mut attributes = Vec::new();
-    let mut rng = thread_rng();
+    let mut rng = Pcg32::seed_from_u64(user_id);
 
     for (attribute_name, keys) in &config.attributes {
         let mut subattribute: IndexMap<String, f32> = IndexMap::new();
@@ -82,7 +83,7 @@ fn calculate_rng_for_attribute(
     attribute_name: &String,
     attribute: &IndexMap<String, f32>,
     attributes: &mut Vec<Trait>,
-    rng: &mut ThreadRng,
+    rng: &mut Lcg64Xsh32,
 ) {
     let choices: Vec<&String> = attribute.keys().collect();
     let weights: Vec<&f32> = attribute.values().collect();
