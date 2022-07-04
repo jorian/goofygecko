@@ -643,6 +643,7 @@ checksum = "282a6247722caba404c065016bbfa522806e51714c34f5dfc3e4a3a46fcb4223"
 dependencies = [
  "autocfg",
  "hashbrown",
+ "serde",
 ]
 
 [[package]]
@@ -1831,7 +1832,10 @@ name = "verusnft"
 version = "0.1.0"
 dependencies = [
  "color-eyre",
+ "indexmap",
  "load-dotenv",
+ "rand 0.8.5",
+ "serde",
  "serde_json",
  "serenity",
  "sqlx",

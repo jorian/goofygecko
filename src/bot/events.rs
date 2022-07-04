@@ -32,13 +32,17 @@ impl EventHandler for Handler {
         .await
         .unwrap();
 
+        // TODO let config_location = sqlx::query!(
+        //     // get the latest config from the database
+        // );
+
         if let Some(row) = data {
             debug!("a member entered that previously entered; ignore")
         } else {
             debug!("this is a first-time new member, adding to user_register");
 
             // TODO here is where we need to start generating an NFT.
-            crate::nft::metadata::generate(user_id);
+            crate::nft::metadata::generate(user_id, "./assets/config.json");
 
             sqlx::query!(
                 "INSERT INTO user_register (discord_user_id) VALUES ($1)",

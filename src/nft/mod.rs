@@ -34,9 +34,9 @@ impl NFTMetadataBuilder {
         }
     }
 
-    pub fn generate_metadata(&mut self, user_id: u64) -> &mut Self {
+    pub fn generate_metadata(&mut self, user_id: u64, config_location: &str) -> &mut Self {
         // generates the metadata attributes partly based on the user_id as a randomizer.
-        metadata::generate(user_id);
+        metadata::generate(user_id, config_location);
 
         self
     }
