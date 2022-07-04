@@ -7,7 +7,7 @@ use serenity::{
     prelude::{Context, EventHandler},
 };
 use tokio::time::sleep;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::bot::utils::database::DatabasePool;
 
@@ -48,23 +48,34 @@ impl EventHandler for Handler {
             debug!("this is a first-time new member, adding to user_register");
 
             tokio::spawn(async move {
-                sleep(Duration::from_secs(5)).await;
-                // if let Ok(()) = create_nft(user_id) {
-                //     sqlx::query!(
-                //         "INSERT INTO user_register (discord_user_id) VALUES ($1)",
-                //         user_id as i64
-                //     )
-                //     .execute(&pool)
-                //     .await
-                //     .unwrap(); // TODO handle error
-                // }
+                if let Ok(nft_metadata) = create_nft(user_id) {
+                    if let Err(e) = sqlx::query!(
+                        "INSERT INTO user_register (discord_user_id) VALUES ($1)",
+                        user_id as i64
+                    )
+                    .execute(&pool)
+                    .await
+                    {
+                        error!("Database write error: {:?}", e)
+                    }
+
+                    match new_member.user.create_dm_channel(&ctx).await {
+                        Ok(dm) => {
+                            dm.say(&ctx, "You NFT is ready!").await.unwrap();
+
+                            // TODO required:
+                            // - image of the NFT (link to arweave)
+                            // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
+                            // - tips to show NFT in verusnft discord
+                        }
+                        Err(e) => {
+                            error!("Sending DM to new user error: {:?}", e);
+                        }
+                    }
+                }
             })
             .await
             .unwrap();
-
-            if let Ok(dm) = new_member.user.create_dm_channel(&ctx).await {
-                dm.say(&ctx, "You NFT is ready!").await.unwrap();
-            }
 
             // TODO add callback when nft creation is done
         }
@@ -76,7 +87,8 @@ impl EventHandler for Handler {
 }
 
 fn create_nft(user_id: u64) -> Result<(), ()> {
-    // TODO here is where we need to start generating an NFT.
+    // here is where we need to start generating an NFT.
+    // TODO get config and directory locations from a separate config file.
 
     let config_path_buf = Path::new("./assets/config.json");
     if config_path_buf.exists() {
