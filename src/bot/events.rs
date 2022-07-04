@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::{path::Path, time::Duration};
 
@@ -48,7 +49,9 @@ impl EventHandler for Handler {
             debug!("this is a first-time new member, adding to user_register");
 
             tokio::spawn(async move {
-                if let Ok(nft_metadata) = create_nft(user_id) {
+                // path is the location of the NFT locally.
+                if let Ok(_path) = create_nft(user_id) {
+                    // if the creation was ok, there should be a metadata JSON file.
                     if let Err(e) = sqlx::query!(
                         "INSERT INTO user_register (discord_user_id) VALUES ($1)",
                         user_id as i64
@@ -86,7 +89,7 @@ impl EventHandler for Handler {
     }
 }
 
-fn create_nft(user_id: u64) -> Result<(), ()> {
+fn create_nft(user_id: u64) -> Result<PathBuf, ()> {
     // here is where we need to start generating an NFT.
     // TODO get config and directory locations from a separate config file.
 
@@ -95,6 +98,5 @@ fn create_nft(user_id: u64) -> Result<(), ()> {
         crate::nft::metadata::generate(user_id, &config_path_buf);
     }
 
-    // crate::nft::art::generate(user_id, Path::new("./assets"), Path::new("./generated"));
-    Ok(())
+    crate::nft::art::generate(user_id, Path::new("./assets"), Path::new("./generated"))
 }

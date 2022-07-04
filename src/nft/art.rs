@@ -16,59 +16,59 @@ pub fn generate(
     assets_directory: &Path,
     output_directory: &Path,
 ) -> Result<PathBuf, ()> {
-    let nft_metadata = read_metadata(user_id, &output_directory);
-
-    let path = create_image(user_id, assets_directory, output_directory);
-
-    Ok(Path::new("./generated/0.png").into())
-}
-
-fn read_metadata(id: u64, output_directory: &Path) {
-    let metadata_location = Path::new(output_directory).join(format!("{}.json", id));
+    let metadata_location = Path::new(output_directory).join(format!("{}.json", user_id));
     let contents = read_to_string(&metadata_location).expect(&format!(
         "Could not read file contents for file {}",
         &metadata_location.display()
     ));
-    // let parsed_metadata =
-    //     serde_json::from_str(contents.as_ref()).expect("could not parse metadata JSON");
 
-    // parsed_metadata
+    let parsed_metadata: NFTMetadata =
+        serde_json::from_str(contents.as_ref()).expect("could not parse metadata JSON");
+
+    create_image(
+        user_id,
+        &parsed_metadata,
+        assets_directory,
+        output_directory,
+    );
+
+    Ok(Path::new(&format!("./generated/{}.png", user_id)).into())
 }
 
-fn create_image(id: u64, assets_directory: &Path, output_directory: &Path) {
-    // let image_path_buffer = Path::new(output_directory).join(format!("{}.png", id));
-    // let image_path = image_path_buffer.to_str().expect(&format!(
-    //     "Image is not valid path at {}",
-    //     image_path_buffer.display()
-    // ));
+fn create_image(id: u64, metadata: &NFTMetadata, assets_directory: &Path, output_directory: &Path) {
+    let image_path_buffer = Path::new(output_directory).join(format!("{}.png", id));
+    let image_path = image_path_buffer.to_str().expect(&format!(
+        "Image is not valid path at {}",
+        image_path_buffer.display()
+    ));
 
-    // let mut composite_command = Command::new("vips");
-    // composite_command.arg("composite");
+    let mut composite_command = Command::new("vips");
+    composite_command.arg("composite");
 
-    // let mut layers = vec![];
-    // for attribute in &metadata.attributes {
-    //     let layer_path_buffer = Path::new(assets_directory)
-    //         .join(attribute.trait_type.clone())
-    //         .join(format!("{}.png", &attribute.value));
-    //     let layer_path = layer_path_buffer.to_str().expect(&format!(
-    //         "Layer is not valid path at {}",
-    //         layer_path_buffer.display()
-    //     ));
-    //     if !layer_path_buffer.exists() {
-    //         panic!("Layer does not exist at path {}", layer_path);
-    //     }
+    let mut layers = vec![];
+    for attribute in &metadata.attributes {
+        let layer_path_buffer = Path::new(assets_directory)
+            .join(attribute.trait_type.clone())
+            .join(format!("{}.png", &attribute.value));
+        let layer_path = layer_path_buffer.to_str().expect(&format!(
+            "Layer is not valid path at {}",
+            layer_path_buffer.display()
+        ));
+        if !layer_path_buffer.exists() {
+            panic!("Layer does not exist at path {}", layer_path);
+        }
 
-    //     layers.push(layer_path.replace(" ", "\\ ")); // Escape spaces in path
-    // }
+        layers.push(layer_path.replace(" ", "\\ ")); // Escape spaces in path
+    }
 
-    // composite_command
-    //     .arg(layers.join(" "))
-    //     .arg(image_path)
-    //     .arg("2") // Use blending mode "source"
-    //     .spawn()
-    //     .expect(&format!("Error creating image {}", id))
-    //     .wait()
-    //     .expect(&format!("Error creating image {}", id));
+    composite_command
+        .arg(layers.join(" "))
+        .arg(image_path)
+        .arg("2") // Use blending mode "source"
+        .spawn()
+        .expect(&format!("Error creating image {}", id))
+        .wait()
+        .expect(&format!("Error creating image {}", id));
 
     // image_path_buffer
 }

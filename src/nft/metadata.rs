@@ -16,27 +16,18 @@ use std::{
 pub fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
 {
     // TODO config location error handling
-    let asset_config =
-        config::parse(config_location.to_str().unwrap()).expect("Error parsing config");
+    let asset_config = config::parse(
+        config_location
+            .to_str()
+            .expect("invalid asset_config location"),
+    )
+    .expect("Error parsing config");
 
-    generate_attributes(user_id, &asset_config, "./generated")
-
-    /* generates a NFTMetadata struct containing:
-    {
-        name: string, // Gecko #1
-        symbol: string,
-        image: string, // filepath under ./generated
-        external_url: option<string>, // populated after uploading the NFT to Arweave
-        edition: int,
-        attributes: [
-            { "trait_type": string, "value": string },
-            ...
-        ]
-    }
-    */
+    let output_directory = Path::new("./generated");
+    generate_attributes(user_id, &asset_config, &output_directory);
 }
 
-fn generate_attributes(user_id: u64, config: &config::Config, output_directory: &str) {
+fn generate_attributes(user_id: u64, config: &config::Config, output_directory: &Path) {
     let mut attributes = Vec::new();
     let mut rng = thread_rng();
 
@@ -122,14 +113,14 @@ fn create_metadata(
     id: u64,
     mut attributes: Vec<Trait>,
     config: &config::Config,
-    output_directory: &str,
+    output_directory: &Path,
 ) {
     dbg!(&attributes);
 
-    let image_name = &format!("{}.png", id);
+    let image_name = &format!("{}.png", id); //TODO this should be atomic sequential number
     let generated_metadata = NFTMetadata {
-        name: &format!("{} #{}", &config.name, id),
-        identity: &config.id,
+        name: &format!("{} #{}", &config.name, id), // TODO this should be atomic sequential number
+        identity: &config.identity,
         description: &config.description,
         image: image_name,
         edition: 0,
@@ -153,7 +144,7 @@ fn create_metadata(
     )
 }
 
-fn write_metadata(id: u64, data: &str, output_directory: &str) {
+fn write_metadata(id: u64, data: &str, output_directory: &Path) {
     let path_buffer = Path::new(output_directory).join(format!("{}.json", id));
 
     let mut file = File::create(&path_buffer).expect(&format!(
@@ -165,64 +156,6 @@ fn write_metadata(id: u64, data: &str, output_directory: &str) {
         path_buffer.display()
     ));
 }
-
-// pub struct NFTMetadataBuilder {
-//     assets_directory: PathBuf,
-//     output_directory: PathBuf,
-//     config: PathBuf,
-//     image_path: Option<PathBuf>,
-//     tx_hash: Option<String>,
-// }
-
-// impl NFTMetadataBuilder {
-//     pub fn new(name: &str) -> Self {
-//         NFTMetadataBuilder {
-//             assets_directory: PathBuf::from("./assets"),
-//             output_directory: PathBuf::from("./generated"),
-//             config: PathBuf::from("./assets/config.toml"),
-//             image_path: None,
-//             tx_hash: None,
-//         }
-//     }
-
-//     pub fn generate_metadata(&mut self, user_id: u64, config_location: &Path) -> &mut Self {
-//         // generates the metadata attributes partly based on the user_id as a randomizer.
-//         metadata::generate(user_id, config_location);
-
-//         self
-//     }
-
-//     pub fn create_image(&mut self) -> &mut Self {
-//         match art::generate(&self.config, &self.assets_directory, &self.output_directory) {
-//             Ok(path) => self.image_path = Some(path),
-//             Err(e) => error!("Error while generating art: {:?}", e),
-//         }
-
-//         self
-//     }
-
-//     pub fn upload_image(&mut self) -> &mut Self {
-//         // TODO unwrap we handled an error in `create_image`.
-//         match arweave::upload_image(self.image_path.as_ref().unwrap()) {
-//             Ok(hash) => self.tx_hash = Some(hash),
-//             Err(e) => error!("Error while uploading image to Arweave: {:?}", e),
-//         }
-
-//         self
-//     }
-
-//     pub fn signed_message(&mut self, message: &str) -> &mut Self {
-//         self
-//     }
-
-//     pub fn verus_id(&mut self, id: &str) -> &mut Self {
-//         self
-//     }
-
-//     pub fn build(self) -> Result<NFTMetadata, ()> {
-//         Ok(NFTMetadata {})
-//     }
-// }
 
 #[derive(Serialize, Deserialize)]
 pub struct NFTMetadata<'a> {

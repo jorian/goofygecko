@@ -13,7 +13,7 @@ pub fn parse(location: &str) -> Result<Config> {
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub name: String,
-    pub id: String,
+    pub identity: String,
     pub description: String,
     pub attributes: IndexMap<String, BTreeMap<String, Attribute>>,
 }
