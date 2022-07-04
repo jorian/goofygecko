@@ -87,3 +87,7 @@ Buy or sell using on-chain marketplace, interfaced to Discord through a bot
 
 - Let geckos mate! 2 eggs will be conceived out of which new Geckos will be born (minted).
 - Make a webpage to showcase geckos
+
+# Credits
+
+github.com/wordlies/resin

@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .group(&GENERAL_GROUP);
 
     let token = env!("DISCORD_TOKEN");
-    dbg!(&token);
+    debug!("{:?}", &token);
     let mut client = Client::builder(token)
         .event_handler(events::Handler {})
         .framework(framework)
