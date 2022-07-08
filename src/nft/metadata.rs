@@ -9,6 +9,7 @@ use rand::prelude::*;
 use rand_pcg::{Lcg64Xsh32, Pcg32};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Write, path::Path};
+use tracing::debug;
 
 pub fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
 {
@@ -26,6 +27,8 @@ pub fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
 
 fn generate_attributes(user_id: u64, config: &config::Config, output_directory: &Path) {
     let mut attributes = Vec::new();
+
+    // REMINDER: the rng is deterministic
     let mut rng = Pcg32::seed_from_u64(user_id);
 
     for (attribute_name, keys) in &config.attributes {
@@ -84,21 +87,21 @@ fn calculate_rng_for_attribute(
     let choices: Vec<&String> = attribute.keys().collect();
     let weights: Vec<&f32> = attribute.values().collect();
 
+    debug!("choices: {:?}", choices);
+    debug!("weights: {:?}", weights);
+
     let dist = WeightedIndex::new(weights)
         .expect("Could not create weighted index, are any odds less than 0?");
 
-    // dbg!(&dist);
-
     let result = dist.sample(rng);
-
-    // dbg!(&result);
+    dbg!(result);
 
     // Remove file extension (.png)
     let name = choices[result]
         .strip_suffix(".png")
         .unwrap_or(choices[result]);
 
-    // dbg!(&name);
+    dbg!(name);
 
     attributes.push(Trait {
         trait_type: attribute_name.to_string(),
@@ -112,8 +115,6 @@ fn create_metadata(
     config: &config::Config,
     output_directory: &Path,
 ) {
-    dbg!(&attributes);
-
     let image_name = &format!("{}.png", id); //TODO this should be atomic sequential number
     let generated_metadata = NFTMetadata {
         name: &format!("{} #{}", &config.name, id), // TODO this should be atomic sequential number
