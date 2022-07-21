@@ -1,0 +1,27 @@
+{
+  "name": "Goofy Geckos",
+  "identity": "goofygecko@",
+  "description": "A proof of concept of how to make NFTs on Verus",
+  "attributes": {
+    "_alchemist": {
+      "alchemist": 99,
+      "non-alchemist": 1
+    },
+    "background": {
+      "8989bf.png": 33,
+      "bdb50d.png": 33,
+      "fbf236.png": 33,
+      "4c8358.png": 1
+    },
+    "base": {
+      "blue.png": 90,
+      "tokay.png": 10
+    },
+    "eye": {
+      "normal.png": 100
+    },
+    "tongue": {
+      "normal.png": 100
+    }
+  }
+}
