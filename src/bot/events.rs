@@ -117,7 +117,7 @@ mod tests {
         let user_id: u64 = 5193453453965301270;
 
         for i in 0..=3 {
-            create_nft(user_id + i);
+            let _ = create_nft(user_id + i);
         }
     }
 }

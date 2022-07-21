@@ -29,7 +29,8 @@ pub fn generate(
         user_id,
         &parsed_metadata,
         assets_directory,
-        output_directory,
+        // need to canonicalize for linux
+        output_directory.canonicalize().unwrap().as_path(),
     );
 
     Ok(Path::new(&format!("./generated/{}.png", user_id)).into())
@@ -64,7 +65,8 @@ fn create_image(id: u64, metadata: &NFTMetadata, assets_directory: &Path, output
     composite_command
         .arg(layers.join(" "))
         .arg(image_path)
-        .arg("2") // Use blending mode "source"
+        // Use blending mode "source"
+        .arg("2")
         .spawn()
         .expect(&format!("Error creating image {}", id))
         .wait()

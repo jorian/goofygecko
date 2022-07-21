@@ -22,6 +22,9 @@ pub fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
     .expect("Error parsing config");
 
     let output_directory = Path::new("./generated");
+    if !output_directory.exists() {
+        std::fs::create_dir(output_directory).unwrap(); //TODO catch error
+    }
     generate_attributes(user_id, &asset_config, &output_directory);
 }
 

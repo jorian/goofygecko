@@ -83,6 +83,13 @@ This can mimic the concept of deposit and withdrawal: depositing an NFT to the D
 Buy or sell using on-chain marketplace, interfaced to Discord through a bot
 (to be described)
 
+## Usage
+
+### Requirements
+
+A config file detailing all the different possibilities for an NFT is required. It needs to exist at `/assets/config.json`. All the assets described in the config need to exist in their own directories in `/assets/`
+
+
 ## Future
 
 - Let geckos mate! 2 eggs will be conceived out of which new Geckos will be born (minted).
