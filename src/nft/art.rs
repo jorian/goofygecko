@@ -11,7 +11,7 @@ use std::fs::read_to_string;
 // creates the .png image using libvips
 // returns the location of the generated .png file.
 
-pub fn generate(
+pub async fn generate(
     user_id: u64,
     assets_directory: &Path,
     output_directory: &Path,

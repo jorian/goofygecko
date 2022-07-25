@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Write, path::Path};
 use tracing::debug;
 
-pub fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
+pub async fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
 {
     // TODO config location error handling
     let asset_config = config::parse(
@@ -25,10 +25,10 @@ pub fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
     if !output_directory.exists() {
         std::fs::create_dir(output_directory).unwrap(); //TODO catch error
     }
-    generate_attributes(user_id, &asset_config, &output_directory);
+    generate_attributes(user_id, &asset_config, &output_directory).await;
 }
 
-fn generate_attributes(user_id: u64, config: &config::Config, output_directory: &Path) {
+async fn generate_attributes(user_id: u64, config: &config::Config, output_directory: &Path) {
     let mut attributes = Vec::new();
 
     // REMINDER: the rng is deterministic
@@ -190,10 +190,10 @@ struct PropertyFile<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn it_works() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn it_works() {
         for i in 1..=9 {
-            generate(20 + i, Path::new("./assets/config.json"))
+            generate(20 + i, Path::new("./assets/config.json")).await;
         }
     }
 }

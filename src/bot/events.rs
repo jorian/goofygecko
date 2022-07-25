@@ -16,8 +16,6 @@ pub struct Handler {}
 #[async_trait]
 impl EventHandler for Handler {
     async fn guild_member_addition(&self, ctx: Context, _guild_id: GuildId, new_member: Member) {
-        // fn cb_nft_ready();
-
         let user_id = new_member.user.id.0;
         debug!(
             "A new member joined the discord with user_id {} and discriminant {}",
@@ -47,43 +45,43 @@ impl EventHandler for Handler {
             debug!("this is a first-time new member, adding to user_register");
 
             // this process can take a while, so we spawn it in a tokio thread
-            tokio::spawn(async move {
-                // path is the location of the NFT image locally.
-                // TODO that path should be a Arweave tx
-                match create_nft(user_id) {
-                    Ok(_path) => {
-                        // if the creation was ok, there should be a metadata JSON file.
-                        // if let Err(e) = sqlx::query!(
-                        //     "INSERT INTO user_register (discord_user_id) VALUES ($1)",
-                        //     user_id as i64
-                        // )
-                        // .execute(&pool)
-                        // .await
-                        // {
-                        //     error!("Database write error: {:?}", e)
-                        // }
+            // tokio::spawn(async move {
+            // path is the location of the NFT image locally.
+            // TODO that path should be a Arweave tx
+            match create_nft(user_id).await {
+                Ok(_path) => {
+                    // if the creation was ok, there should be a metadata JSON file.
+                    // if let Err(e) = sqlx::query!(
+                    //     "INSERT INTO user_register (discord_user_id) VALUES ($1)",
+                    //     user_id as i64
+                    // )
+                    // .execute(&pool)
+                    // .await
+                    // {
+                    //     error!("Database write error: {:?}", e)
+                    // }
 
-                        match new_member.user.create_dm_channel(&ctx).await {
-                            Ok(dm) => {
-                                dm.say(&ctx, "Your NFT is ready!").await.unwrap();
+                    match new_member.user.create_dm_channel(&ctx).await {
+                        Ok(dm) => {
+                            dm.say(&ctx, "Your NFT is ready!").await.unwrap();
 
-                                // TODO required:
-                                // - image of the NFT (link to arweave)
-                                // arweave::get_image() for the gecko that belongs to user_id
-                                // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
-                                // - tips to show NFT in verusnft discord
-                            }
-                            Err(e) => {
-                                error!("Sending DM to new user error: {:?}", e);
-                            }
+                            // TODO required:
+                            // - image of the NFT (link to arweave)
+                            // arweave::get_image() for the gecko that belongs to user_id
+                            // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
+                            // - tips to show NFT in verusnft discord
+                        }
+                        Err(e) => {
+                            error!("Sending DM to new user error: {:?}", e);
                         }
                     }
-                    Err(e) => {
-                        error!("Something went wrong while creating the NFT: {:?}", e)
-                        // TODO something that notifies me
-                    }
                 }
-            });
+                Err(e) => {
+                    error!("Something went wrong while creating the NFT: {:?}", e)
+                    // TODO something that notifies me
+                }
+            }
+            // });
 
             // TODO add callback when nft creation is done
         }
@@ -94,30 +92,36 @@ impl EventHandler for Handler {
     }
 }
 
-fn create_nft(user_id: u64) -> Result<PathBuf, ()> {
+async fn create_nft(user_id: u64) -> Result<(), ()> {
     // here is where we need to start generating an NFT.
     // TODO get config and directory locations from a separate config file.
 
-    let config_path_buf = Path::new("./assets/config.json");
-    if config_path_buf.exists() {
-        crate::nft::metadata::generate(user_id, &config_path_buf);
-    } else {
-        error!("config file does not exist: {}", config_path_buf.display());
-    }
+    crate::nft::NFTBuilder::generate(user_id).await;
 
-    crate::nft::art::generate(user_id, Path::new("./assets"), Path::new("./generated"))
+    Ok(())
+
+    // let config_path_buf = Path::new("./assets/config.json");
+    // if config_path_buf.exists() {
+    //     crate::nft::metadata::generate(user_id, &config_path_buf);
+    // } else {
+    //     error!("config file does not exist: {}", config_path_buf.display());
+    // }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::create_nft;
+    use rand::Rng;
 
-    #[test]
-    fn create_metadata() {
-        let user_id: u64 = 5193453453965301270;
+    use super::create_nft;
+    // use rand::Rng;
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn create_metadata() {
+        let mut rng = rand::thread_rng();
+        let user_id: u64 = rng.gen_range(0..123456789);
 
         for i in 0..=3 {
-            let _ = create_nft(user_id + i);
+            let _ = create_nft(user_id + i).await;
         }
     }
 }
