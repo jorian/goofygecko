@@ -1,17 +1,19 @@
 extern crate verusnftlib;
 
+use std::sync::Arc;
+
 use color_eyre::Report;
 use load_dotenv::load_dotenv;
 use tracing::{debug, error, info};
 use tracing_subscriber::filter::EnvFilter;
 
 use serenity::{
-    client::{bridge::gateway::GatewayIntents, Client, Context},
+    client::{Client, Context},
     framework::standard::{
         macros::{command, group, hook},
         CommandResult, DispatchError, StandardFramework,
     },
-    model::channel::Message,
+    model::{channel::Message, gateway::GatewayIntents},
 };
 
 use verusnftlib::bot::{events, utils, utils::database::DatabasePool};
@@ -20,7 +22,7 @@ use verusnftlib::bot::{events, utils, utils::database::DatabasePool};
 #[commands(ping)]
 struct General;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 8)]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     load_dotenv!();
 
@@ -32,19 +34,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .group(&GENERAL_GROUP);
 
     let token = env!("DISCORD_TOKEN");
-    debug!("{:?}", &token);
-    let mut client = Client::builder(token)
-        .event_handler(events::Handler {})
-        .framework(framework)
-        .intents({
-            let mut intents = GatewayIntents::all();
-            intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
-            intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
+    let handler = Arc::new(events::Handler {});
 
-            intents
-        })
+    let mut intents = GatewayIntents::all();
+    intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
+    intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
+
+    let mut client = Client::builder(token, intents)
+        .event_handler_arc(handler.clone())
+        .framework(framework)
         .await
-        .expect("Error creating discord bot client");
+        .expect("Error creating serenity client");
 
     {
         // in a block to close the write borrow
@@ -93,7 +93,12 @@ async fn setup_logging() -> Result<(), Report> {
 }
 
 #[hook]
-pub async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
+pub async fn on_dispatch_error(
+    ctx: &Context,
+    msg: &Message,
+    error: DispatchError,
+    _command_name: &str,
+) {
     match error {
         DispatchError::OnlyForDM => {
             info!("Only in DM");

@@ -22,12 +22,14 @@ rand_pcg = "0.3"
 serde = "1.0"
 serde_json = "1.0"
 tokio = {version = "1.0", features = ["macros", "rt-multi-thread", "net"]}
+futures = "0.3.21"
 tracing = "0.1.26"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
 
 [dependencies.serenity]
 default-features = false
 features = [
+  "cache",
   "builder",
   "client",
   "framework",
@@ -38,7 +40,7 @@ features = [
   "utils",
   "rustls_backend",
 ]
-version = "0.10"
+version = "0.11"
 
 [dependencies.sqlx]
 default-features = false
