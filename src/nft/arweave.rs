@@ -1,30 +1,87 @@
-// Handles connection and communication to and from Arweave
+/// Handles connection and communication to and from Arweave
+use std::path::{Path, PathBuf};
+use url::Url;
 
-use std::path::Path;
+use arloader::{
+    transaction::{Base64, FromUtf8Strs, Tag},
+    Arweave,
+};
 
 // first we need to create and sign the transaction for the image.
 // that results in a id which we subsequently use in the metadata file.
-//
 
-pub fn upload_image(image_location: &Path) -> Result<String, ()> {
-    Ok(String::new())
+struct ArweaveTransaction {
+    keypair_location: PathBuf,
+    arweave: Arweave,
+    file_location: Option<PathBuf>,
+    content_type: Option<String>,
+    id: Option<Base64>,
 }
 
-// pub fn upload_metadata(metadata: &NFTMetadata) -> Result<(), ()> {
-//     Ok(())
-// }
+impl ArweaveTransaction {
+    pub async fn new(keypair_location: &Path) -> Self {
+        let arweave = Arweave::from_keypair_path(
+            keypair_location.into(),
+            Url::parse("https://arweave.net").unwrap(),
+        )
+        .await
+        .unwrap();
 
-// struct TransactionBuilder {
-//     image_tx_id: Option<String>,
-// }
-// impl TransactionBuilder {
-//     pub async fn new(id: u64) -> Self {
-//         let keypair_path = "/home/jorian/.ardrivewallet.json";
-//         let arweave = Arweave::from_keypair_path(
-//             keypair_path.into(),
-//             Url::parse("https://arweave.net").unwrap(),
-//         )
-//         .await
-//         .unwrap();
-//     }
-// }
+        Self {
+            keypair_location: keypair_location.into(),
+            arweave,
+            file_location: None,
+            content_type: None,
+            id: None,
+        }
+    }
+
+    pub async fn upload(
+        &mut self,
+        file_location: &Path,
+        content_type: String,
+    ) -> Result<String, ()> {
+        let price_terms = self.arweave.get_price_terms(1.0).await.unwrap();
+
+        let tag: Tag<Base64> = Tag::from_utf8_strs("Content-Type", &content_type).unwrap();
+        if let Ok(tx) = self
+            .arweave
+            .create_transaction_from_file_path(
+                file_location.into(),
+                Some(vec![tag]),
+                None,
+                price_terms,
+                false,
+            )
+            .await
+        {
+            // sign and send the transaction
+            let signed_tx = self.arweave.sign_transaction(tx).unwrap();
+
+            dbg!(&signed_tx.id.to_string());
+
+            let tx = self.arweave.post_transaction(&signed_tx).await.unwrap();
+
+            self.file_location = Some(file_location.into());
+            self.content_type = Some(content_type.into());
+            self.id = Some(tx.0.clone());
+
+            return Ok(tx.0.to_string());
+        }
+
+        Err(())
+    }
+
+    pub async fn status(&self) -> Result<String, ()> {
+        if let Some(id) = &self.id {
+            return self
+                .arweave
+                .get_status(id)
+                .await
+                .map(|status| status.to_string())
+                .or(Err(()));
+        }
+
+        Err(())
+    }
+}

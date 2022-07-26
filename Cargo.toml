@@ -14,6 +14,7 @@ name = "verusnftlib"
 path = "src/lib.rs"
 
 [dependencies]
+arloader = "0.1.63"
 color-eyre = "0.6"
 indexmap = {version = "1.8.0", features = ["serde"]}
 load-dotenv = "0.1.2"
@@ -25,6 +26,7 @@ tokio = {version = "1.0", features = ["macros", "rt-multi-thread", "net"]}
 futures = "0.3.21"
 tracing = "0.1.26"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
+url = "2.2.2"
 
 [dependencies.serenity]
 default-features = false

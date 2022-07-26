@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use color_eyre::Report;
 use load_dotenv::load_dotenv;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 use tracing_subscriber::filter::EnvFilter;
 
 use serenity::{
@@ -22,7 +22,8 @@ use verusnftlib::bot::{events, utils, utils::database::DatabasePool};
 #[commands(ping)]
 struct General;
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 8)]
+#[tokio::main(worker_threads = 8)]
+#[instrument]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     load_dotenv!();
 
