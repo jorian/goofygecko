@@ -24,6 +24,9 @@
     },
     "tongue": {
       "normal.png": 100
+    },
+    "test": {
+      "test.png": 100
     }
   }
 }
