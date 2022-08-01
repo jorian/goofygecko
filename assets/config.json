@@ -1,7 +1,7 @@
 {
-  "name": "Goofy Geckos",
-  "identity": "goofygecko@",
-  "description": "A proof of concept of how to make NFTs on Verus",
+  "name": "TEST Goofy Geckos TEST",
+  "identity": "test@",
+  "description": "A VerusNFT PoC",
   "attributes": {
     "_alchemist": {
       "alchemist": 50,

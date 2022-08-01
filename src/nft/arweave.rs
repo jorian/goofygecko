@@ -1,5 +1,6 @@
 /// Handles connection and communication to and from Arweave
 use std::path::{Path, PathBuf};
+use tracing::debug;
 use url::Url;
 
 use arloader::{
@@ -10,7 +11,7 @@ use arloader::{
 // first we need to create and sign the transaction for the image.
 // that results in a id which we subsequently use in the metadata file.
 
-struct ArweaveTransaction {
+pub struct ArweaveTransaction {
     keypair_location: PathBuf,
     arweave: Arweave,
     file_location: Option<PathBuf>,
@@ -42,6 +43,7 @@ impl ArweaveTransaction {
         content_type: String,
     ) -> Result<String, ()> {
         let price_terms = self.arweave.get_price_terms(1.0).await.unwrap();
+        debug!("price terms: {:?}", &price_terms);
 
         let tag: Tag<Base64> = Tag::from_utf8_strs("Content-Type", &content_type).unwrap();
         if let Ok(tx) = self
@@ -58,7 +60,7 @@ impl ArweaveTransaction {
             // sign and send the transaction
             let signed_tx = self.arweave.sign_transaction(tx).unwrap();
 
-            dbg!(&signed_tx.id.to_string());
+            debug!("signed txid: {}", &signed_tx.id.to_string());
 
             let tx = self.arweave.post_transaction(&signed_tx).await.unwrap();
 

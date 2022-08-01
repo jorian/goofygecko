@@ -47,7 +47,7 @@ impl EventHandler for Handler {
                 // path is the location of the NFT image locally.
                 // TODO that path should be a Arweave tx
                 match create_nft(user_id).await {
-                    Ok(_path) => {
+                    Ok(location) => {
                         // if the creation was ok, there should be a metadata JSON file.
                         // if let Err(e) = sqlx::query!(
                         //     "INSERT INTO user_register (discord_user_id) VALUES ($1)",
@@ -62,6 +62,9 @@ impl EventHandler for Handler {
                         match new_member.user.create_dm_channel(&ctx).await {
                             Ok(dm) => {
                                 dm.say(&ctx, "Your NFT is ready!").await.unwrap();
+                                dm.say(&ctx, format!("https://arweave.net/{}", location))
+                                    .await
+                                    .unwrap();
 
                                 // TODO required:
                                 // - image of the NFT (link to arweave)
@@ -88,14 +91,14 @@ impl EventHandler for Handler {
     }
 }
 
-async fn create_nft(user_id: u64) -> Result<(), ()> {
+async fn create_nft(user_id: u64) -> Result<String, ()> {
     // here is where we need to start generating an NFT.
     // TODO get config and directory locations from a separate config file.
 
-    crate::nft::NFTBuilder::generate(user_id).await;
+    let nft_builder = crate::nft::NFTBuilder::generate(user_id).await;
     info!("{}", user_id);
 
-    Ok(())
+    Ok(nft_builder.uploaded_image_tx_hash.unwrap())
 
     // let config_path_buf = Path::new("./assets/config.json");
     // if config_path_buf.exists() {
