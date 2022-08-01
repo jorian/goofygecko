@@ -4,8 +4,8 @@
   "description": "A proof of concept of how to make NFTs on Verus",
   "attributes": {
     "_alchemist": {
-      "alchemist": 99,
-      "non-alchemist": 1
+      "alchemist": 50,
+      "non-alchemist": 50
     },
     "background": {
       "8989bf.png": 33,
@@ -15,7 +15,9 @@
     },
     "base": {
       "blue.png": 90,
-      "tokay.png": 10
+      "_alchemist:alchemist": {
+        "tokay.png": 100
+      }
     },
     "eye": {
       "normal.png": 100

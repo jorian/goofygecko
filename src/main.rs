@@ -102,7 +102,6 @@ pub async fn on_dispatch_error(
 ) {
     match error {
         DispatchError::OnlyForDM => {
-            info!("Only in DM");
             let _ = msg
                 .reply(ctx, "This can only be done in DM with this bot")
                 .await;
