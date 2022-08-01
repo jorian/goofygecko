@@ -46,7 +46,7 @@ impl EventHandler for Handler {
             tokio::spawn(async move {
                 // path is the location of the NFT image locally.
                 // TODO that path should be a Arweave tx
-                match create_nft(user_id, 0).await {
+                match create_nft(user_id).await {
                     Ok(_path) => {
                         // if the creation was ok, there should be a metadata JSON file.
                         // if let Err(e) = sqlx::query!(
@@ -88,12 +88,12 @@ impl EventHandler for Handler {
     }
 }
 
-async fn create_nft(user_id: u64, i: u64) -> Result<(), ()> {
+async fn create_nft(user_id: u64) -> Result<(), ()> {
     // here is where we need to start generating an NFT.
     // TODO get config and directory locations from a separate config file.
 
     crate::nft::NFTBuilder::generate(user_id).await;
-    println!("{}", i);
+    info!("{}", user_id);
 
     Ok(())
 
@@ -119,7 +119,7 @@ mod tests {
 
         for i in 0..10 {
             join_handles.push(tokio::spawn(async move {
-                create_nft(user_id + i, i).await.unwrap();
+                create_nft(user_id + i).await.unwrap();
             }))
         }
 
