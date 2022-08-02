@@ -5,7 +5,7 @@ use serenity::{
 };
 use tracing::{debug, error, info};
 
-use crate::{bot::utils::database::DatabasePool, nft::NFTBuilder};
+use crate::{bot::utils::database::DatabasePool, nft::VerusNFTBuilder};
 
 #[derive(Debug)]
 pub struct Handler {}
@@ -99,12 +99,12 @@ impl EventHandler for Handler {
     }
 }
 
-async fn create_nft(user_id: u64) -> Result<NFTBuilder, ()> {
+async fn create_nft(user_id: u64) -> Result<VerusNFTBuilder, ()> {
     // here is where we need to start generating an NFT.
     // TODO get config and directory locations from a separate config file.
 
     info!("creating nft for {}", user_id);
-    let nft_builder = crate::nft::NFTBuilder::generate(user_id).await;
+    let nft_builder = crate::nft::VerusNFTBuilder::generate(user_id).await;
 
     // after this is done
 

@@ -11,10 +11,14 @@ Is concerned with:
 // use tracing::log::error;
 
 use std::{
+    fs::{self, File},
+    io::Write,
     path::{Path, PathBuf},
+    str::FromStr,
     sync::Arc,
 };
 
+use serde_json::{json, Value};
 use serenity::prelude::{Mutex, RwLock};
 use tracing::{debug, error};
 
@@ -34,8 +38,10 @@ static CONFIG_LOCATION: &str = "assets/config.json";
 static ASSETS_LOCATION: &str = "assets/";
 static OUTPUT_LOCATION: &str = "generated/";
 
+pub struct VerusNFT {}
+
 #[derive(Debug)]
-pub struct NFTBuilder {
+pub struct VerusNFTBuilder {
     // every NFT has its own user_id:
     pub user_id: u64,
     pub generated_image_path: Option<PathBuf>,
@@ -45,7 +51,7 @@ pub struct NFTBuilder {
     pub verus_registration_tx_id: Option<String>,
 }
 
-impl NFTBuilder {
+impl VerusNFTBuilder {
     pub async fn generate(user_id: u64) -> Self {
         let mut nft_builder = Self {
             user_id,
@@ -78,7 +84,14 @@ impl NFTBuilder {
     }
 
     async fn generate_metadata(&mut self) {
-        metadata::generate(self.user_id, CONFIG_LOCATION.as_ref()).await
+        metadata::generate(self.user_id, CONFIG_LOCATION.as_ref()).await;
+
+        // TODO this is really ugly, need one source of truth
+        // ideally metadata::generate returns the location of the generated metadata, which I can update here:
+        let path = PathBuf::from_str(&format!("{}{}.json", OUTPUT_LOCATION, self.user_id))
+            .expect("parsing metadata path failed");
+
+        self.generated_metadata_path = Some(path);
     }
 
     async fn generate_art(&mut self) {
@@ -100,7 +113,6 @@ impl NFTBuilder {
 
     async fn arweave_image_upload(&mut self) {
         if let Some(path) = self.generated_image_path.clone() {
-            // tokio::spawn(async move {
             let mut arweave_tx =
                 arweave::ArweaveTransaction::new(Path::new(".ardrivewallet.json")).await;
 
@@ -114,7 +126,8 @@ impl NFTBuilder {
                     error!("could not upload image: {:?}", e);
                 }
             }
-            // });
+        } else {
+            error!("no generated_image_path was found for: {}", self.user_id);
         }
     }
 
@@ -122,6 +135,33 @@ impl NFTBuilder {
         // self.metadata
         // self.image_hash
         // put image_hash in metadata.
+
+        // read metadata file
+        // update `image` key with actual location on Arweave
+        // save metadata file
+
+        if let Some(image_hash) = self.uploaded_image_tx_hash.clone() {
+            if let Some(path) = self.generated_metadata_path.clone() {
+                let metadata_file = fs::read_to_string(&path).unwrap();
+                let mut metadata: Value = serde_json::from_str(&metadata_file).unwrap();
+
+                if let Some(image) = metadata.get_mut("image") {
+                    *image = json!(image_hash);
+                }
+
+                let mut file = File::create(&path)
+                    .expect(&format!("Could not create file at path {}", path.display()));
+
+                write!(file, "{}", metadata).expect(&format!(
+                    "Could not write to file at path {}",
+                    path.display()
+                ));
+            } else {
+                error!("no generated metadata file was found");
+            }
+        } else {
+            error!("no image hash to insert in metadata file");
+        }
     }
 
     async fn arweave_metadata_upload(&mut self) {
@@ -138,5 +178,3 @@ impl NFTBuilder {
 }
 
 pub struct NFTBuilderError {}
-
-unsafe impl Send for NFTBuilder {}
