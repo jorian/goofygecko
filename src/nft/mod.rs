@@ -39,15 +39,21 @@ pub struct NFTBuilder {
     // every NFT has its own user_id:
     pub user_id: u64,
     pub generated_image_path: Option<PathBuf>,
+    pub generated_metadata_path: Option<PathBuf>,
     pub uploaded_image_tx_hash: Option<String>,
+    pub verus_commitment_tx_id: Option<String>, // TODO txid
+    pub verus_registration_tx_id: Option<String>,
 }
 
 impl NFTBuilder {
     pub async fn generate(user_id: u64) -> Self {
         let mut nft_builder = Self {
             user_id,
+            generated_metadata_path: None,
             generated_image_path: None,
             uploaded_image_tx_hash: None,
+            verus_commitment_tx_id: None,
+            verus_registration_tx_id: None,
         };
 
         nft_builder.generate_metadata().await;
@@ -55,18 +61,19 @@ impl NFTBuilder {
 
         debug!("art created");
 
-        nft_builder.arweave_upload().await;
+        nft_builder.arweave_image_upload().await;
 
-        // let tx_hash = .read().await.uploaded_image_tx_hash.clone();
+        nft_builder.update_metadata().await;
 
         debug!("{:?}", nft_builder.uploaded_image_tx_hash);
-
-        // let tx = nft_builder.uploaded_image_tx_hash;
 
         Self {
             user_id,
             generated_image_path: None,
+            generated_metadata_path: None,
             uploaded_image_tx_hash: nft_builder.uploaded_image_tx_hash.clone(),
+            verus_commitment_tx_id: None,
+            verus_registration_tx_id: None,
         }
     }
 
@@ -84,12 +91,14 @@ impl NFTBuilder {
         {
             Ok(path) => {
                 self.generated_image_path = Some(path);
-            },
-            Err(e) => { error!("{:?}", e)}
+            }
+            Err(e) => {
+                error!("{:?}", e)
+            }
         }
     }
 
-    async fn arweave_upload(&mut self) {
+    async fn arweave_image_upload(&mut self) {
         if let Some(path) = self.generated_image_path.clone() {
             // tokio::spawn(async move {
             let mut arweave_tx =
@@ -107,6 +116,24 @@ impl NFTBuilder {
             }
             // });
         }
+    }
+
+    async fn update_metadata(&self) {
+        // self.metadata
+        // self.image_hash
+        // put image_hash in metadata.
+    }
+
+    async fn arweave_metadata_upload(&mut self) {
+        // upload
+    }
+
+    async fn create_verus_id_commitment(&self) {
+        // need to wait for it to be confirmed.
+    }
+
+    async fn create_verus_id_registration(&self) {
+        // add metadata hashes of metadata to content map
     }
 }
 
