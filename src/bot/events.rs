@@ -40,54 +40,66 @@ impl EventHandler for Handler {
             debug!("a member entered that previously entered; ignore")
         } else {
             debug!("this is a first-time new member, adding to user_register");
+            // get a sequential number to number the new gecko:
+            let next_gecko_number = sqlx::query!("SELECT nextval('goofygeckoserial')")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            debug!(
+                "the next Gecko number is: {:?}",
+                next_gecko_number.nextval.unwrap()
+            );
 
             // this process can take a while, so we spawn it in a tokio thread
             // tokio::spawn is parallelism. It hooks into the runtime executor as a new future.
             tokio::spawn(async move {
                 // path is the location of the NFT image locally.
                 // TODO that path should be a Arweave tx
-                match create_nft(user_id).await {
-                    Ok(nft_builder) => {
-                        // if the creation was ok, there should be a metadata JSON file.
-                        // if let Err(e) = sqlx::query!(
-                        //     "INSERT INTO user_register (discord_user_id) VALUES ($1)",
-                        //     user_id as i64
-                        // )
-                        // .execute(&pool)
-                        // .await
-                        // {
-                        //     error!("Database write error: {:?}", e)
-                        // }
+                if let Some(sequence) = next_gecko_number.nextval {
+                    match create_nft(user_id, sequence as u64).await {
+                        Ok(nft_builder) => {
+                            // if the creation was ok, there should be a metadata JSON file.
+                            // if let Err(e) = sqlx::query!(
+                            //     "INSERT INTO user_register (discord_user_id) VALUES ($1)",
+                            //     user_id as i64
+                            // )
+                            // .execute(&pool)
+                            // .await
+                            // {
+                            //     error!("Database write error: {:?}", e)
+                            // }
 
-                        // TODO need to store private key that maps user_id.
+                            // TODO need to store private key that maps user_id.
 
-                        match new_member.user.create_dm_channel(&ctx).await {
-                            Ok(dm) => {
-                                dm.say(&ctx, "Your NFT is ready!").await.unwrap();
-                                dm.say(
-                                    &ctx,
-                                    format!(
-                                        "https://arweave.net/{}",
-                                        nft_builder.uploaded_image_tx_hash.unwrap()
-                                    ),
-                                )
-                                .await
-                                .unwrap();
+                            match new_member.user.create_dm_channel(&ctx).await {
+                                Ok(dm) => {
+                                    dm.say(&ctx, "Your NFT is ready!").await.unwrap();
+                                    dm.say(
+                                        &ctx,
+                                        format!(
+                                            "https://arweave.net/{}",
+                                            nft_builder.uploaded_image_tx_hash.unwrap()
+                                        ),
+                                    )
+                                    .await
+                                    .unwrap();
 
-                                // TODO required:
-                                // - image of the NFT (link to arweave)
-                                // arweave::get_image() for the gecko that belongs to user_id
-                                // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
-                                // - tips to show NFT in verusnft discord
-                            }
-                            Err(e) => {
-                                error!("Sending DM to new user error: {:?}", e);
+                                    // TODO required:
+                                    // - image of the NFT (link to arweave)
+                                    // arweave::get_image() for the gecko that belongs to user_id
+                                    // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
+                                    // - tips to show NFT in verusnft discord
+                                }
+                                Err(e) => {
+                                    error!("Sending DM to new user error: {:?}", e);
+                                }
                             }
                         }
-                    }
-                    Err(e) => {
-                        error!("Something went wrong while creating the NFT: {:?}", e)
-                        // TODO something that notifies me
+                        Err(e) => {
+                            error!("Something went wrong while creating the NFT: {:?}", e)
+                            // TODO something that notifies me
+                        }
                     }
                 }
             });
@@ -99,12 +111,12 @@ impl EventHandler for Handler {
     }
 }
 
-async fn create_nft(user_id: u64) -> Result<VerusNFTBuilder, ()> {
+async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFTBuilder, ()> {
     // here is where we need to start generating an NFT.
     // TODO get config and directory locations from a separate config file.
 
-    info!("creating nft for {}", user_id);
-    let nft_builder = crate::nft::VerusNFTBuilder::generate(user_id).await;
+    info!("creating nft #{} for {}", sequence, user_id);
+    let nft_builder = crate::nft::VerusNFTBuilder::generate(user_id, sequence).await;
 
     // after this is done
 
@@ -132,7 +144,7 @@ mod tests {
 
         for i in 0..10 {
             join_handles.push(tokio::spawn(async move {
-                create_nft(user_id + i).await.unwrap();
+                create_nft(user_id + i, i).await.unwrap();
             }))
         }
 

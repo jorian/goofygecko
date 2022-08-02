@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Write, path::Path};
 use tracing::debug;
 
-pub async fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
+pub async fn generate(user_id: u64, sequence: u64, config_location: &Path) /* -> NFTMetadata */
 {
     // TODO config location error handling
     let asset_config = config::parse(
@@ -25,10 +25,15 @@ pub async fn generate(user_id: u64, config_location: &Path) /* -> NFTMetadata */
     if !output_directory.exists() {
         std::fs::create_dir(output_directory).unwrap(); //TODO catch error
     }
-    generate_attributes(user_id, &asset_config, &output_directory).await;
+    generate_attributes(user_id, sequence, &asset_config, &output_directory).await;
 }
 
-async fn generate_attributes(user_id: u64, config: &config::Config, output_directory: &Path) {
+async fn generate_attributes(
+    user_id: u64,
+    sequence: u64,
+    config: &config::Config,
+    output_directory: &Path,
+) {
     let mut attributes = Vec::new();
 
     // REMINDER: the rng is deterministic
@@ -78,7 +83,7 @@ async fn generate_attributes(user_id: u64, config: &config::Config, output_direc
         calculate_rng_for_attribute(attribute_name, &subattribute, &mut attributes, &mut rng);
     }
 
-    create_metadata(user_id, attributes, config, output_directory)
+    create_metadata(user_id, sequence, attributes, config, output_directory)
 }
 
 fn calculate_rng_for_attribute(
@@ -113,14 +118,15 @@ fn calculate_rng_for_attribute(
 }
 
 fn create_metadata(
-    id: u64,
+    user_id: u64,
+    sequence: u64,
     mut attributes: Vec<Trait>,
     config: &config::Config,
     output_directory: &Path,
 ) {
-    let image_name = &format!("{}.png", id); //TODO this should be atomic sequential number
+    let image_name = &format!("{}.png", user_id);
     let generated_metadata = NFTMetadata {
-        name: &format!("{} #{}", &config.name, id), // TODO this should be atomic sequential number
+        name: &format!("{} #{}", &config.name, sequence),
         identity: &config.identity,
         description: &config.description,
         image: image_name,
@@ -139,7 +145,7 @@ fn create_metadata(
     };
 
     write_metadata(
-        id,
+        user_id,
         &serde_json::to_string(&generated_metadata).expect("Could not serialize generated JSON"),
         output_directory,
     )
@@ -193,7 +199,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn it_works() {
         for i in 1..=9 {
-            generate(20 + i, Path::new("./assets/config.json")).await;
+            generate(20 + i, i, Path::new("./assets/config.json")).await;
         }
     }
 }

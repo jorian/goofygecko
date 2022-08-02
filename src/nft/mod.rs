@@ -44,6 +44,7 @@ pub struct VerusNFT {}
 pub struct VerusNFTBuilder {
     // every NFT has its own user_id:
     pub user_id: u64,
+    pub sequence: u64,
     pub generated_image_path: Option<PathBuf>,
     pub generated_metadata_path: Option<PathBuf>,
     pub uploaded_image_tx_hash: Option<String>,
@@ -52,9 +53,10 @@ pub struct VerusNFTBuilder {
 }
 
 impl VerusNFTBuilder {
-    pub async fn generate(user_id: u64) -> Self {
+    pub async fn generate(user_id: u64, sequence: u64) -> Self {
         let mut nft_builder = Self {
             user_id,
+            sequence,
             generated_metadata_path: None,
             generated_image_path: None,
             uploaded_image_tx_hash: None,
@@ -75,6 +77,7 @@ impl VerusNFTBuilder {
 
         Self {
             user_id,
+            sequence,
             generated_image_path: None,
             generated_metadata_path: None,
             uploaded_image_tx_hash: nft_builder.uploaded_image_tx_hash.clone(),
@@ -83,8 +86,9 @@ impl VerusNFTBuilder {
         }
     }
 
+    /// Generates the metadata for the user that just entered and stores it locally.
     async fn generate_metadata(&mut self) {
-        metadata::generate(self.user_id, CONFIG_LOCATION.as_ref()).await;
+        metadata::generate(self.user_id, self.sequence, CONFIG_LOCATION.as_ref()).await;
 
         // TODO this is really ugly, need one source of truth
         // ideally metadata::generate returns the location of the generated metadata, which I can update here:
@@ -106,7 +110,7 @@ impl VerusNFTBuilder {
                 self.generated_image_path = Some(path);
             }
             Err(e) => {
-                error!("{:?}", e)
+                error!("error while generating art file: {:?}", e)
             }
         }
     }

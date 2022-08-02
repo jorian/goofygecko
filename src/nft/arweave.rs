@@ -42,7 +42,7 @@ impl ArweaveTransaction {
         file_location: &Path,
         content_type: String,
     ) -> Result<String, ()> {
-        let price_terms = self.arweave.get_price_terms(1.0).await.unwrap();
+        let price_terms = self.arweave.get_price_terms(1.5).await.unwrap();
         debug!("price terms: {:?}", &price_terms);
 
         let tag: Tag<Base64> = Tag::from_utf8_strs("Content-Type", &content_type).unwrap();
