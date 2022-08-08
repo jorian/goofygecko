@@ -66,14 +66,8 @@ impl VerusNFTBuilder {
 
         nft_builder.generate_metadata().await;
         nft_builder.generate_art().await;
-
-        debug!("art created");
-
         nft_builder.arweave_image_upload().await;
-
         nft_builder.update_metadata().await;
-
-        debug!("{:?}", nft_builder.uploaded_image_tx_hash);
 
         Self {
             user_id,
