@@ -60,17 +60,16 @@ impl EventHandler for Handler {
                     match create_nft(user_id, sequence as u64).await {
                         Ok(nft_builder) => {
                             // if the creation was ok, there should be a metadata JSON file.
-                            // if let Err(e) = sqlx::query!(
-                            //     "INSERT INTO user_register (discord_user_id) VALUES ($1)",
-                            //     user_id as i64
-                            // )
-                            // .execute(&pool)
-                            // .await
-                            // {
-                            //     error!("Database write error: {:?}", e)
-                            // }
-
-                            // TODO need to store private key that maps user_id.
+                            if let Err(e) = sqlx::query!(
+                                "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
+                                user_id as i64,
+                                nft_builder.vrsc_address.to_string()
+                            )
+                            .execute(&pool)
+                            .await
+                            {
+                                error!("Database write error: {:?}", e)
+                            }
 
                             match new_member.user.create_dm_channel(&ctx).await {
                                 Ok(dm) => {
