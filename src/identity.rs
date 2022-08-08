@@ -14,8 +14,8 @@ pub struct Identity {
     pub registration_txid: Txid,
 }
 
-impl Identity {
-    pub fn builder() -> IdentityBuilder {
+impl<'a> Identity {
+    pub fn builder() -> IdentityBuilder<'a> {
         IdentityBuilder {
             testnet: false,
             currency_name: None,
@@ -30,19 +30,19 @@ impl Identity {
 }
 
 #[derive(Debug)]
-pub struct IdentityBuilder {
+pub struct IdentityBuilder<'a> {
     testnet: bool,
     currency_name: Option<String>,
     name: Option<String>,
     referral: Option<String>,
     // defaults to 1
     minimum_signatures: Option<u8>,
-    addresses: Option<Vec<Address>>,
+    addresses: Option<Vec<&'a Address>>,
     private_address: Option<String>,
     content_map: Option<Value>,
 }
 
-impl IdentityBuilder {
+impl<'a> IdentityBuilder<'a> {
     pub fn testnet(&mut self, testnet: bool) -> &mut Self {
         self.testnet = testnet;
 
@@ -74,7 +74,7 @@ impl IdentityBuilder {
         self
     }
 
-    pub fn add_address(&mut self, address: Address) -> &mut Self {
+    pub fn add_address(&mut self, address: &'a Address) -> &mut Self {
         match self.addresses.as_mut() {
             Some(vec) => {
                 vec.push(address);
@@ -314,7 +314,7 @@ mod tests {
 
         assert!(identity_builder
             .name("test")
-            .add_address(Address::from_str("RP1sexQNvjGPohJkK9JnuPDH7V7NboycGj").unwrap())
+            .add_address(&Address::from_str("RP1sexQNvjGPohJkK9JnuPDH7V7NboycGj").unwrap())
             .with_content_map(json!({ "deadbeef": "deafdeed"}))
             .validate()
             .is_ok());
@@ -326,7 +326,7 @@ mod tests {
 
         assert!(identity_builder
             .name("test")
-            .add_address(Address::from_str("RP1sexQNvjGPohJkK9JnuPDH7V7NboycGj").unwrap())
+            .add_address(&Address::from_str("RP1sexQNvjGPohJkK9JnuPDH7V7NboycGj").unwrap())
             .with_content_map(json!({ "a non hex": "object"}))
             .validate()
             .is_err());

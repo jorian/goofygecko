@@ -1,6 +1,6 @@
 {
   "name": "TEST Goofy Geckos TEST",
-  "identity": "test@",
+  "identity": "geckotest@",
   "description": "A VerusNFT PoC",
   "attributes": {
     "_alchemist": {

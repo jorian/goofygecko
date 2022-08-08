@@ -15,12 +15,14 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
     str::FromStr,
-    sync::Arc,
 };
 
 use serde_json::{json, Value};
-use serenity::prelude::{Mutex, RwLock};
+// use serenity::prelude::{Mutex, RwLock};
 use tracing::{debug, error};
+use vrsc_rpc::{json::vrsc::Address, jsonrpc::client, Auth, Client, RpcApi};
+
+use crate::identity::Identity;
 
 pub(crate) mod art;
 mod arweave;
@@ -44,22 +46,35 @@ pub struct VerusNFT {}
 pub struct VerusNFTBuilder {
     // every NFT has its own user_id:
     pub user_id: u64,
+    pub vrsc_address: Address,
     pub sequence: u64,
     pub generated_image_path: Option<PathBuf>,
     pub generated_metadata_path: Option<PathBuf>,
     pub uploaded_image_tx_hash: Option<String>,
+    pub uploaded_metadata_tx_hash: Option<String>,
     pub verus_commitment_tx_id: Option<String>, // TODO txid
     pub verus_registration_tx_id: Option<String>,
 }
 
 impl VerusNFTBuilder {
     pub async fn generate(user_id: u64, sequence: u64) -> Self {
+        let client = Client::chain("vrsctest", Auth::ConfigFile, None);
+        let address = match client {
+            Ok(client) => client.get_new_address().unwrap(),
+            Err(e) => {
+                error!("an error happened while getting a new address: {:?}", e);
+                panic!("{:?}", e);
+            }
+        };
+
         let mut nft_builder = Self {
             user_id,
+            vrsc_address: address,
             sequence,
             generated_metadata_path: None,
             generated_image_path: None,
             uploaded_image_tx_hash: None,
+            uploaded_metadata_tx_hash: None,
             verus_commitment_tx_id: None,
             verus_registration_tx_id: None,
         };
@@ -68,13 +83,26 @@ impl VerusNFTBuilder {
         nft_builder.generate_art().await;
         nft_builder.arweave_image_upload().await;
         nft_builder.update_metadata().await;
+        nft_builder.arweave_metadata_upload().await;
+
+        // verus client: get new address
+        // store address in database, linked to user (should i do that here??)
+        //
+
+        let identity_builder = Identity::builder()
+            .testnet(true)
+            .on_currency_name("geckotest")
+            .add_address(&nft_builder.vrsc_address)
+            .with_content_map(json!({ "hex": "self.uploaded_metadata_tx_hash to 256 bit"}));
 
         Self {
             user_id,
             sequence,
+            vrsc_address: nft_builder.vrsc_address,
             generated_image_path: None,
             generated_metadata_path: None,
             uploaded_image_tx_hash: nft_builder.uploaded_image_tx_hash.clone(),
+            uploaded_metadata_tx_hash: nft_builder.uploaded_metadata_tx_hash.clone(),
             verus_commitment_tx_id: None,
             verus_registration_tx_id: None,
         }
@@ -163,7 +191,26 @@ impl VerusNFTBuilder {
     }
 
     async fn arweave_metadata_upload(&mut self) {
-        // upload
+        if let Some(path) = self.generated_metadata_path.clone() {
+            let mut arweave_tx =
+                arweave::ArweaveTransaction::new(Path::new(".ardrivewallet.json")).await;
+
+            debug!("arweave instance created");
+
+            match arweave_tx
+                .upload(&path, String::from("application/json"))
+                .await
+            {
+                Ok(tx_hash) => {
+                    self.uploaded_metadata_tx_hash = Some(tx_hash);
+                }
+                Err(e) => {
+                    error!("could not upload metadata: {:?}", e);
+                }
+            }
+        } else {
+            error!("no generated_metadata_path was found for: {}", self.user_id);
+        }
     }
 
     async fn create_verus_id_commitment(&self) {

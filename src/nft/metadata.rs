@@ -127,7 +127,7 @@ fn create_metadata(
     let image_name = &format!("{}.png", user_id);
     let generated_metadata = NFTMetadata {
         name: &format!("{} #{}", &config.name, sequence),
-        identity: &config.identity,
+        identity: &format!("{}.{}", sequence, &config.identity),
         description: &config.description,
         image: image_name,
         edition: 0,
