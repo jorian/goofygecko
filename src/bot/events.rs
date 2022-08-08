@@ -115,8 +115,9 @@ async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFTBuilder, ()> 
     // here is where we need to start generating an NFT.
     // TODO get config and directory locations from a separate config file.
 
-    info!("creating nft #{} for {}", sequence, user_id);
-    let nft_builder = crate::nft::VerusNFTBuilder::generate(user_id, sequence).await;
+    let series = String::from("geckotest");
+    info!("creating {} nft #{} for {}", series, sequence, user_id);
+    let nft_builder = crate::nft::VerusNFTBuilder::generate(user_id, sequence, series).await;
 
     // after this is done
 

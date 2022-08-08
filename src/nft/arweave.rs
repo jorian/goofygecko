@@ -40,17 +40,21 @@ impl ArweaveTransaction {
     pub async fn upload(
         &mut self,
         file_location: &Path,
-        content_type: String,
+        tags: Vec<(&str, &str)>,
     ) -> Result<String, ()> {
         let price_terms = self.arweave.get_price_terms(1.5).await.unwrap();
         debug!("price terms: {:?}", &price_terms);
 
-        let tag: Tag<Base64> = Tag::from_utf8_strs("Content-Type", &content_type).unwrap();
+        // let tag: Tag<Base64> = Tag::from_utf8_strs("Content-Type", &content_type).unwrap();
         if let Ok(tx) = self
             .arweave
             .create_transaction_from_file_path(
                 file_location.into(),
-                Some(vec![tag]),
+                Some(
+                    tags.into_iter()
+                        .map(|(k, v)| Tag::from_utf8_strs(k, v).unwrap())
+                        .collect(),
+                ),
                 None,
                 price_terms,
                 false,
@@ -65,7 +69,7 @@ impl ArweaveTransaction {
             let tx = self.arweave.post_transaction(&signed_tx).await.unwrap();
 
             self.file_location = Some(file_location.into());
-            self.content_type = Some(content_type.into());
+            // self.content_type = Some(content_type.into());
             self.id = Some(tx.0.clone());
 
             return Ok(tx.0.to_string());

@@ -48,6 +48,7 @@ pub struct VerusNFTBuilder {
     pub user_id: u64,
     pub vrsc_address: Address,
     pub sequence: u64,
+    pub edition: String,
     pub generated_image_path: Option<PathBuf>,
     pub generated_metadata_path: Option<PathBuf>,
     pub uploaded_image_tx_hash: Option<String>,
@@ -57,7 +58,7 @@ pub struct VerusNFTBuilder {
 }
 
 impl VerusNFTBuilder {
-    pub async fn generate(user_id: u64, sequence: u64) -> Self {
+    pub async fn generate(user_id: u64, sequence: u64, series: String) -> Self {
         let client = Client::chain("vrsctest", Auth::ConfigFile, None);
         let address = match client {
             Ok(client) => client.get_new_address().unwrap(),
@@ -71,6 +72,7 @@ impl VerusNFTBuilder {
             user_id,
             vrsc_address: address,
             sequence,
+            edition: series,
             generated_metadata_path: None,
             generated_image_path: None,
             uploaded_image_tx_hash: None,
@@ -91,7 +93,7 @@ impl VerusNFTBuilder {
 
         let identity_builder = Identity::builder()
             .testnet(true)
-            .on_currency_name("geckotest")
+            .on_currency_name(&nft_builder.edition)
             .add_address(&nft_builder.vrsc_address)
             .with_content_map(json!({ "hex": "self.uploaded_metadata_tx_hash to 256 bit"}));
 
@@ -99,6 +101,7 @@ impl VerusNFTBuilder {
             user_id,
             sequence,
             vrsc_address: nft_builder.vrsc_address,
+            edition: nft_builder.edition,
             generated_image_path: None,
             generated_metadata_path: None,
             uploaded_image_tx_hash: nft_builder.uploaded_image_tx_hash.clone(),
@@ -144,7 +147,16 @@ impl VerusNFTBuilder {
 
             debug!("arweave instance created");
 
-            match arweave_tx.upload(&path, String::from("image/png")).await {
+            match arweave_tx
+                .upload(
+                    &path,
+                    vec![
+                        ("Content-Type", "image/png"),
+                        ("identity", &format!("{}.{}@", self.sequence, &self.edition)),
+                    ],
+                )
+                .await
+            {
                 Ok(tx_hash) => {
                     self.uploaded_image_tx_hash = Some(tx_hash);
                 }
@@ -198,7 +210,13 @@ impl VerusNFTBuilder {
             debug!("arweave instance created");
 
             match arweave_tx
-                .upload(&path, String::from("application/json"))
+                .upload(
+                    &path,
+                    vec![
+                        ("Content-Type", "application/json"),
+                        ("identity", &format!("{}.{}@", self.sequence, &self.edition)),
+                    ],
+                )
                 .await
             {
                 Ok(tx_hash) => {
