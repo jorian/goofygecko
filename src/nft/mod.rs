@@ -19,10 +19,10 @@ use std::{
 
 use serde_json::{json, Value};
 // use serenity::prelude::{Mutex, RwLock};
-use tracing::{debug, error};
-use vrsc_rpc::{json::vrsc::Address, jsonrpc::client, Auth, Client, RpcApi};
+use tracing::{debug, error, info};
+use vrsc_rpc::{json::vrsc::Address, Auth, Client, RpcApi};
 
-use crate::identity::Identity;
+use super::identity::Identity;
 
 pub(crate) mod art;
 mod arweave;
@@ -53,8 +53,7 @@ pub struct VerusNFTBuilder {
     pub generated_metadata_path: Option<PathBuf>,
     pub uploaded_image_tx_hash: Option<String>,
     pub uploaded_metadata_tx_hash: Option<String>,
-    pub verus_commitment_tx_id: Option<String>, // TODO txid
-    pub verus_registration_tx_id: Option<String>,
+    pub identity: Option<Identity>,
 }
 
 impl VerusNFTBuilder {
@@ -77,8 +76,7 @@ impl VerusNFTBuilder {
             generated_image_path: None,
             uploaded_image_tx_hash: None,
             uploaded_metadata_tx_hash: None,
-            verus_commitment_tx_id: None,
-            verus_registration_tx_id: None,
+            identity: None,
         };
 
         nft_builder.generate_metadata().await;
@@ -86,29 +84,13 @@ impl VerusNFTBuilder {
         nft_builder.arweave_image_upload().await;
         nft_builder.update_metadata().await;
         nft_builder.arweave_metadata_upload().await;
+        nft_builder.create_identity().await;
 
         // verus client: get new address
         // store address in database, linked to user (should i do that here??)
         //
 
-        let identity_builder = Identity::builder()
-            .testnet(true)
-            .on_currency_name(&nft_builder.edition)
-            .add_address(&nft_builder.vrsc_address)
-            .with_content_map(json!({ "hex": "self.uploaded_metadata_tx_hash to 256 bit"}));
-
-        Self {
-            user_id,
-            sequence,
-            vrsc_address: nft_builder.vrsc_address,
-            edition: nft_builder.edition,
-            generated_image_path: None,
-            generated_metadata_path: None,
-            uploaded_image_tx_hash: nft_builder.uploaded_image_tx_hash.clone(),
-            uploaded_metadata_tx_hash: nft_builder.uploaded_metadata_tx_hash.clone(),
-            verus_commitment_tx_id: None,
-            verus_registration_tx_id: None,
-        }
+        nft_builder
     }
 
     /// Generates the metadata for the user that just entered and stores it locally.
@@ -214,7 +196,7 @@ impl VerusNFTBuilder {
                     &path,
                     vec![
                         ("Content-Type", "application/json"),
-                        ("identity", &format!("{}.{}@", self.sequence, &self.edition)),
+                        ("vdxfid", &format!("{}.{}@", self.sequence, &self.edition)), //TODO set actual vdxfid
                     ],
                 )
                 .await
@@ -231,12 +213,49 @@ impl VerusNFTBuilder {
         }
     }
 
-    async fn create_verus_id_commitment(&self) {
-        // need to wait for it to be confirmed.
-    }
+    async fn create_identity(&mut self) {
+        debug!(
+            "creating identity with primary address: {}",
+            &self.vrsc_address
+        );
 
-    async fn create_verus_id_registration(&self) {
-        // add metadata hashes of metadata to content map
+        // need to convert keys:
+        // call verus client to get 160 bit key of `<sequence>.<edition>.geckotest.vrsctest::nft.json`
+        // it actually is unnecessary, because we know that the identity has a namespace in and of itself:
+        // - the subid is the sequence number
+        // - the series is the currency name
+        // - created on either testnet or mainnet (VRSC vs vrsctest)
+        // that is enough information to find out where the metadata is, as the metadata file has a tag with
+        // the vdxfkey of `<sequence>.<edition>.geckotest.vrsctest::nft.json` and can thus be queried on Arweave.
+        //
+        let mut identity_builder = Identity::builder();
+
+        // if config is testnet {
+        identity_builder.testnet(true);
+        // }
+        if let Err(e) = identity_builder
+            .name(&format!("{}", self.sequence))
+            .on_currency_name(&self.edition)
+            .add_address(&self.vrsc_address)
+            .validate()
+        {
+            error!("something went wrong while creating the identity: {:?}", e);
+            return;
+        }
+
+        let identity_result = identity_builder.create_identity().await;
+        match identity_result {
+            Ok(identity) => {
+                info!(
+                    "identity `{}` has been created! (txid: {})",
+                    identity.name_commitment.namereservation.name, identity.registration_txid
+                );
+                self.identity = Some(identity);
+            }
+            Err(e) => {
+                error!("something went wrong: {:?}", e)
+            }
+        }
     }
 }
 
