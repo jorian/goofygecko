@@ -124,30 +124,46 @@ impl VerusNFTBuilder {
 
     async fn arweave_image_upload(&mut self) {
         if let Some(path) = self.generated_image_path.clone() {
-            let mut arweave_tx =
-                arweave::ArweaveTransaction::new(Path::new(".ardrivewallet.json")).await;
-
-            debug!("arweave instance created");
-
-            match arweave_tx
-                .upload(
-                    &path,
-                    vec![
-                        ("Content-Type", "image/png"),
-                        ("identity", &format!("{}.{}@", self.sequence, &self.edition)),
-                    ],
-                )
-                .await
-            {
-                Ok(tx_hash) => {
-                    self.uploaded_image_tx_hash = Some(tx_hash);
-                }
-                Err(e) => {
-                    error!("could not upload image: {:?}", e);
-                }
-            }
+            self.uploaded_image_tx_hash = Self::arweave_upload(
+                &path,
+                vec![
+                    ("Content-Type", "image/png"),
+                    ("identity", &format!("{}.{}@", self.sequence, &self.edition)),
+                ],
+            )
+            .await
+            .ok()
         } else {
             error!("no generated_image_path was found for: {}", self.user_id);
+        }
+    }
+
+    async fn arweave_metadata_upload(&mut self) {
+        if let Some(path) = self.generated_metadata_path.clone() {
+            self.uploaded_metadata_tx_hash = Self::arweave_upload(
+                &path,
+                vec![
+                    ("Content-Type", "application/json"),
+                    ("vdxfid", &format!("{}.{}@", self.sequence, &self.edition)), //TODO set actual vdxfid
+                ],
+            )
+            .await
+            .ok()
+        } else {
+            error!("no generated_metadata_path was found for: {}", self.user_id);
+        }
+    }
+
+    async fn arweave_upload(path: &Path, tags: Vec<(&str, &str)>) -> Result<String, ()> {
+        let mut arweave_tx =
+            arweave::ArweaveTransaction::new(Path::new(".ardrivewallet.json")).await;
+
+        match arweave_tx.upload(&path, tags).await {
+            Ok(tx_hash) => Ok(tx_hash),
+            Err(e) => {
+                error!("could not upload image: {:?}", e);
+                Err(e)
+            }
         }
     }
 
@@ -173,35 +189,6 @@ impl VerusNFTBuilder {
             }
         } else {
             error!("no image hash to insert in metadata file");
-        }
-    }
-
-    async fn arweave_metadata_upload(&mut self) {
-        if let Some(path) = self.generated_metadata_path.clone() {
-            let mut arweave_tx =
-                arweave::ArweaveTransaction::new(Path::new(".ardrivewallet.json")).await;
-
-            debug!("arweave instance created");
-
-            match arweave_tx
-                .upload(
-                    &path,
-                    vec![
-                        ("Content-Type", "application/json"),
-                        ("vdxfid", &format!("{}.{}@", self.sequence, &self.edition)), //TODO set actual vdxfid
-                    ],
-                )
-                .await
-            {
-                Ok(tx_hash) => {
-                    self.uploaded_metadata_tx_hash = Some(tx_hash);
-                }
-                Err(e) => {
-                    error!("could not upload metadata: {:?}", e);
-                }
-            }
-        } else {
-            error!("no generated_metadata_path was found for: {}", self.user_id);
         }
     }
 
