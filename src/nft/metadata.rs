@@ -102,14 +102,14 @@ fn calculate_rng_for_attribute(
         .expect("Could not create weighted index, are any odds less than 0?");
 
     let result = dist.sample(rng);
-    dbg!(result);
+    debug!(result);
 
     // Remove file extension (.png)
     let name = choices[result]
         .strip_suffix(".png")
         .unwrap_or(choices[result]);
 
-    dbg!(name);
+    debug!(name);
 
     attributes.push(Trait {
         trait_type: attribute_name.to_string(),

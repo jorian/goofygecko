@@ -1,4 +1,4 @@
-FROM rust:1.59
+FROM rust:1.62
 
 RUN USER=root cargo new --bin verusnft
 WORKDIR /app

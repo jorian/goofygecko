@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     debug!("starting client");
 
     if let Err(why) = client.start().await {
-        println!(
+        error!(
             "An error occurred while running the discord bot client: {:?}",
             why
         );
@@ -102,14 +102,15 @@ pub async fn on_dispatch_error(
 ) {
     match error {
         DispatchError::OnlyForDM => {
-            let _ = msg
+            if let Err(e) = msg
                 .reply(ctx, "This can only be done in DM with this bot")
-                .await;
+                .await
+            {
+                error!("something went wrong while sending a reply in DM: {:?}", e);
+            }
         }
         _ => {
             error!("Unhandled dispatch error: {:?}", error);
-            eprintln!("An unhandled dispatch error has occurred:");
-            eprintln!("{:?}", error);
         }
     }
 }
