@@ -3335,6 +3335,7 @@ dependencies = [
  "serenity",
  "sqlx",
  "tokio",
+ "toml",
  "tracing",
  "tracing-subscriber",
  "url",

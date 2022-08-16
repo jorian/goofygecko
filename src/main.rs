@@ -1,22 +1,26 @@
 extern crate verusnftlib;
 
-use std::sync::Arc;
+use std::{collections::HashSet, fs::File, io::Read, sync::Arc};
 
 use color_eyre::Report;
 use load_dotenv::load_dotenv;
-use tracing::{debug, error, info, instrument};
+use tracing::{error, info, instrument};
 use tracing_subscriber::filter::EnvFilter;
 
 use serenity::{
-    client::{Client, Context},
+    client::{ClientBuilder, Context},
     framework::standard::{
         macros::{command, group, hook},
         CommandResult, DispatchError, StandardFramework,
     },
+    http::Http,
     model::{channel::Message, gateway::GatewayIntents},
 };
 
-use verusnftlib::bot::{events, utils, utils::database::DatabasePool};
+use verusnftlib::{
+    bot::{events, utils, utils::database::DatabasePool},
+    config::ConfigurationData,
+};
 
 #[group]
 #[commands(ping)]
@@ -27,25 +31,55 @@ struct General;
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     load_dotenv!();
 
-    setup_logging().await?;
+    let mut file = File::open("config.toml")?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    // gets the data from the config.toml file
+    let configuration = toml::from_str::<ConfigurationData>(&contents).unwrap();
+
+    if configuration.enable_tracing {
+        setup_logging().await?;
+
+        info!("Tracer initialized");
+    }
+
+    let bot_token = configuration.discord;
+    let http = Http::new(&bot_token);
+
+    let (owners, bot_id) = match http.get_current_application_info().await {
+        Ok(info) => {
+            let mut owners = HashSet::new();
+            if let Some(team) = info.team {
+                owners.insert(team.owner_user_id);
+            } else {
+                owners.insert(info.owner.id);
+            }
+
+            let current_user = http.get_current_user().await?;
+
+            (owners, current_user.id)
+        }
+        Err(why) => panic!("Could not access application info: {:?}", why),
+    };
 
     let framework = StandardFramework::new()
-        .configure(|c| c.prefix("!")) // set the bot's prefix to "!"
+        .configure(|c| c.prefix("").on_mention(Some(bot_id)).owners(owners))
         .on_dispatch_error(on_dispatch_error)
+        // .before(f) // returns a bool where the value of which will prevent running the event any further
+        // .after(f)
         .group(&GENERAL_GROUP);
 
-    let token = env!("DISCORD_TOKEN");
     let handler = Arc::new(events::Handler {});
 
     let mut intents = GatewayIntents::all();
     intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
     intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
 
-    let mut client = Client::builder(token, intents)
+    let mut client = ClientBuilder::new(&bot_token, intents)
         .event_handler_arc(handler.clone())
         .framework(framework)
-        .await
-        .expect("Error creating serenity client");
+        .await?;
 
     {
         // in a block to close the write borrow
@@ -55,9 +89,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         data.insert::<DatabasePool>(pg_pool);
     }
 
-    debug!("starting client");
+    info!("Starting client");
 
-    if let Err(why) = client.start().await {
+    // start listening on a separate thread and dispatch any events to their own threads.
+    // (which means i don't have to care so much about threads!)
+    if let Err(why) = client.start_autosharded().await {
         error!(
             "An error occurred while running the discord bot client: {:?}",
             why
@@ -89,6 +125,8 @@ async fn setup_logging() -> Result<(), Report> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .init();
+
+    info!("Subscriber initialized");
 
     Ok(())
 }
