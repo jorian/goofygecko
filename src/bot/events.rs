@@ -42,26 +42,27 @@ impl EventHandler for Handler {
         } else {
             debug!("this is a first-time new member, adding to user_register");
             // get a sequential number to number the new gecko:
-            let next_gecko_number = sqlx::query!("SELECT nextval('goofygeckoserial')")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+            let sequence = 13;
+            // let next_gecko_number = sqlx::query!("SELECT nextval('goofygeckoserial')")
+            //     .fetch_one(&pool)
+            //     .await
+            //     .unwrap();
 
-            debug!(
-                "the next Gecko number is: {:?}",
-                next_gecko_number.nextval.unwrap()
-            );
+            // debug!(
+            //     "the next Gecko number is: {:?}",
+            //     next_gecko_number.nextval.unwrap()
+            // );
 
             // this process can take a while, so we spawn it in a tokio thread
             // tokio::spawn is parallelism. It hooks into the runtime executor as a new future.
             tokio::spawn(async move {
                 // path is the location of the NFT image locally.
                 // TODO that path should be a Arweave tx
-                if let Some(sequence) = next_gecko_number.nextval {
-                    match create_nft(user_id, sequence as u64).await {
-                        Ok(nft_builder) => {
-                            // if the creation was ok, there should be a metadata JSON file.
-                            if let Err(e) = sqlx::query!(
+                // if let Some(sequence) = next_gecko_number.nextval {
+                match create_nft(user_id, sequence as u64).await {
+                    Ok(nft_builder) => {
+                        // if the creation was ok, there should be a metadata JSON file.
+                        if let Err(e) = sqlx::query!(
                                 "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
                                 user_id as i64,
                                 nft_builder.vrsc_address.to_string()
@@ -72,36 +73,40 @@ impl EventHandler for Handler {
                                 error!("Database write error: {:?}", e)
                             }
 
-                            match new_member.user.create_dm_channel(&ctx).await {
-                                Ok(dm) => {
-                                    dm.say(&ctx, "Your NFT is ready!").await.unwrap();
-                                    dm.say(
-                                        &ctx,
-                                        format!(
-                                            "https://arweave.net/{}",
-                                            nft_builder.uploaded_image_tx_hash.unwrap()
-                                        ),
-                                    )
-                                    .await
-                                    .unwrap();
+                        match new_member.user.create_dm_channel(&ctx).await {
+                            Ok(dm) => {
+                                dm.say(&ctx, "Your NFT is ready!").await.unwrap();
+                                dm.say(
+                                    &ctx,
+                                    format!(
+                                        "https://arweave.net/{}",
+                                        nft_builder.uploaded_image_tx_hash.unwrap()
+                                    ),
+                                )
+                                .await
+                                .unwrap();
 
-                                    // TODO required:
-                                    // - image of the NFT (link to arweave)
-                                    // arweave::get_image() for the gecko that belongs to user_id
-                                    // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
-                                    // - tips to show NFT in verusnft discord
+                                if let Some(identity) = nft_builder.identity.as_ref() {
+                                    dm.say(&ctx, format!("txid of identity registration: https://testex.verus.io/tx/{}", identity.registration_txid)).await.unwrap();
                                 }
-                                Err(e) => {
-                                    error!("Sending DM to new user error: {:?}", e);
-                                }
+
+                                // TODO required:
+                                // - image of the NFT (link to arweave)
+                                // arweave::get_image() for the gecko that belongs to user_id
+                                // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
+                                // - tips to show NFT in verusnft discord
+                            }
+                            Err(e) => {
+                                error!("Sending DM to new user error: {:?}", e);
                             }
                         }
-                        Err(e) => {
-                            error!("Something went wrong while creating the NFT: {:?}", e)
-                            // TODO something that notifies me
-                        }
+                    }
+                    Err(e) => {
+                        error!("Something went wrong while creating the NFT: {:?}", e)
+                        // TODO something that notifies me
                     }
                 }
+                // }
             });
         }
     }
