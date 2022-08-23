@@ -4,10 +4,6 @@ use std::{collections::HashSet, sync::Arc};
 
 use color_eyre::Report;
 use load_dotenv::load_dotenv;
-use sqlx::PgPool;
-use tracing::{error, info, instrument};
-use tracing_subscriber::filter::EnvFilter;
-
 use serenity::{
     client::{ClientBuilder, Context},
     framework::standard::{
@@ -17,6 +13,9 @@ use serenity::{
     http::Http,
     model::{channel::Message, gateway::GatewayIntents},
 };
+use sqlx::PgPool;
+use tracing::{debug, error, info, instrument};
+use tracing_subscriber::filter::EnvFilter;
 
 use verusnftlib::bot::{events, utils::config::get_configuration, utils::database::DatabasePool};
 
@@ -27,12 +26,6 @@ struct General;
 #[tokio::main(worker_threads = 8)]
 #[instrument]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // let mut file = File::open("config.toml")?;
-    // let mut contents = String::new();
-    // file.read_to_string(&mut contents)?;
-
-    // // gets the data from the config.toml file
-    // let configuration = toml::from_str::<Settings>(&contents).unwrap();
     let configuration = get_configuration().unwrap();
 
     if configuration.enable_tracing {
@@ -40,6 +33,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         info!("Tracer initialized");
     }
+
+    debug!(
+        "connection string: {}",
+        configuration.database.connection_string()
+    );
 
     load_dotenv!();
 
@@ -86,6 +84,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         let pg_options = configuration.database.with_db();
         let pg_pool = PgPool::connect_lazy_with(pg_options);
+
+        sqlx::migrate!("./migrations")
+            .run(&pg_pool)
+            .await
+            .expect("Failed to migrate the database");
+
         data.insert::<DatabasePool>(pg_pool);
     }
 

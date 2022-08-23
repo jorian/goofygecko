@@ -3,16 +3,23 @@ use serenity::{
     model::{guild::Member, prelude::Ready},
     prelude::{Context, EventHandler},
 };
-use tracing::{debug, error, info, instrument};
+use uuid::Uuid;
+
+use tracing::{debug, error, info, info_span, instrument, Instrument};
 
 use crate::{bot::utils::database::DatabasePool, nft::VerusNFTBuilder};
 
 #[derive(Debug)]
 pub struct Handler {}
-
 #[async_trait]
 impl EventHandler for Handler {
-    #[instrument(skip(ctx))]
+    #[instrument(
+        skip(ctx),
+        fields(
+            request_id = %Uuid::new_v4(),
+            member_id = %new_member.user.id.0,
+        )
+    )]
     async fn guild_member_addition(&self, ctx: Context, new_member: Member) {
         let user_id = new_member.user.id.0;
         debug!(
@@ -42,11 +49,13 @@ impl EventHandler for Handler {
         } else {
             debug!("this is a first-time new member, adding to user_register");
             // get a sequential number to number the new gecko:
-            let sequence = 13;
-            // let next_gecko_number = sqlx::query!("SELECT nextval('goofygeckoserial')")
-            //     .fetch_one(&pool)
-            //     .await
-            //     .unwrap();
+            // let sequence = 14;
+            let next_gecko_number = sqlx::query!("SELECT nextval('goofygeckoserial')")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let sequence = next_gecko_number.nextval.unwrap();
 
             // debug!(
             //     "the next Gecko number is: {:?}",
@@ -107,7 +116,7 @@ impl EventHandler for Handler {
                     }
                 }
                 // }
-            });
+            }.instrument(info_span!("nft_member_thread")));
         }
     }
 

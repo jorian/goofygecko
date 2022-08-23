@@ -66,7 +66,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     // Default to `local` if unspecified.
     let environment = std::env::var("APP_ENVIRONMENT").unwrap_or_else(|_| "development".into());
     let environment_filename = format!("{}.toml", environment);
-    dbg!(&environment_filename);
+
     let settings = config::Config::builder()
         .add_source(config::File::from(
             configuration_directory.join("base.toml"),
@@ -82,8 +82,6 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
                 .separator("__"),
         )
         .build()?;
-
-    dbg!(&settings);
 
     settings.try_deserialize::<Settings>()
 }

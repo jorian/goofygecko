@@ -37,6 +37,7 @@ vrsc-rpc = "0.0.4"
 toml = "0.5"
 secrecy = {version = "0.8", features = ["serde"]}
 serde-aux = "3.1"
+uuid = {version = "1.1.2", features = ["v4"]}
 
 [dependencies.serenity]
 default-features = false
@@ -56,5 +57,5 @@ version = "0.11"
 
 [dependencies.sqlx]
 default-features = false
-features = ["postgres", "macros", "migrate", "uuid", "offline", "chrono", "runtime-tokio-rustls"]
+features = ["postgres", "macros", "migrate", "offline", "chrono", "runtime-tokio-rustls"]
 version = "0.6"
