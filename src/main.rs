@@ -3,6 +3,7 @@ extern crate verusnftlib;
 use std::{collections::HashSet, sync::Arc};
 
 use color_eyre::Report;
+use load_dotenv::load_dotenv;
 use sqlx::PgPool;
 use tracing::{error, info, instrument};
 use tracing_subscriber::filter::EnvFilter;
@@ -40,7 +41,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Tracer initialized");
     }
 
-    let bot_token = configuration.discord;
+    //load_dotenv!();
+
+    let bot_token = std::env::var("DISCORD_TOKEN")?;
     let http = Http::new(&bot_token);
 
     let (owners, bot_id) = match http.get_current_application_info().await {

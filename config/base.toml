@@ -1,0 +1,10 @@
+assets_directory = "./assets"
+output_directory = "./generated"
+trace_level = "debug"
+enable_tracing = true
+
+[database]
+host = "127.0.0.1"
+port = 5432
+username = "postgres"
+password = "postgres"

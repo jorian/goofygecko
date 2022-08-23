@@ -19,8 +19,8 @@ FROM debian:bullseye-slim AS runtime
 
 WORKDIR /app
 
+COPY config config 
 COPY --from=builder /app/target/release/verusnft verusnft
-COPY config config
 
 ENV APP_ENVIRONMENT production
 
