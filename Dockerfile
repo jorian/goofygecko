@@ -22,7 +22,6 @@ WORKDIR /app
 COPY --from=builder /app/target/release/verusnft verusnft
 COPY config config
 
-ENV DATABASE_URL postgres://postgres:password@localhost:5432/test0
-ENV DATABASE_URL2 postgres://postgres:password@localhost:5432/test0
+ENV APP_ENVIRONMENT production
 
 ENTRYPOINT [ "./verusnft" ]
