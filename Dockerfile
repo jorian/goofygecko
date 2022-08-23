@@ -1,7 +1,15 @@
-FROM rust:1.62 as builder
-
+FROM lukemathwalker/cargo-chef:latest-rust-1.62.0 AS chef
 WORKDIR /app
 
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder 
+COPY --from=planner /app/recipe.json recipe.json
+# Build dependencies - this is the caching Docker layer!
+RUN cargo chef cook --release --recipe-path recipe.json
+# Build application
 COPY . .
 
 ENV SQLX_OFFLINE true
@@ -12,8 +20,9 @@ FROM debian:bullseye-slim AS runtime
 WORKDIR /app
 
 COPY --from=builder /app/target/release/verusnft verusnft
+COPY config config
 
 ENV DATABASE_URL postgres://postgres:password@localhost:5432/test0
 ENV DATABASE_URL2 postgres://postgres:password@localhost:5432/test0
-ENV DISCORD_TOKEN OTU4MDU4MjgzMDc4Mzk4MDQy.YkHzTg.Wv4jRyS1HXg4uxdKq7PsY6YTtwQ
+
 ENTRYPOINT [ "./verusnft" ]

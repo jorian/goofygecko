@@ -1,9 +1,9 @@
 extern crate verusnftlib;
 
-use std::{collections::HashSet, fs::File, io::Read, sync::Arc};
+use std::{collections::HashSet, sync::Arc};
 
 use color_eyre::Report;
-use load_dotenv::load_dotenv;
+use sqlx::PgPool;
 use tracing::{error, info, instrument};
 use tracing_subscriber::filter::EnvFilter;
 
@@ -17,10 +17,7 @@ use serenity::{
     model::{channel::Message, gateway::GatewayIntents},
 };
 
-use verusnftlib::{
-    bot::{events, utils, utils::database::DatabasePool},
-    config::ConfigurationData,
-};
+use verusnftlib::bot::{events, utils::config::get_configuration, utils::database::DatabasePool};
 
 #[group]
 #[commands(ping)]
@@ -29,14 +26,13 @@ struct General;
 #[tokio::main(worker_threads = 8)]
 #[instrument]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    load_dotenv!();
+    // let mut file = File::open("config.toml")?;
+    // let mut contents = String::new();
+    // file.read_to_string(&mut contents)?;
 
-    let mut file = File::open("config.toml")?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    // gets the data from the config.toml file
-    let configuration = toml::from_str::<ConfigurationData>(&contents).unwrap();
+    // // gets the data from the config.toml file
+    // let configuration = toml::from_str::<Settings>(&contents).unwrap();
+    let configuration = get_configuration().unwrap();
 
     if configuration.enable_tracing {
         setup_logging().await?;
@@ -85,7 +81,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // in a block to close the write borrow
         let mut data = client.data.write().await;
 
-        let pg_pool = utils::database::obtain_postgres_pool().await?;
+        let pg_options = configuration.database.with_db();
+        let pg_pool = PgPool::connect_lazy_with(pg_options);
         data.insert::<DatabasePool>(pg_pool);
     }
 

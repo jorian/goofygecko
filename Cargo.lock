@@ -495,6 +495,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "config"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11f1667b8320afa80d69d8bbe40830df2c8a06003d86f73d8e003b2c48df416d"
+dependencies = [
+ "async-trait",
+ "lazy_static",
+ "nom",
+ "pathdiff",
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "console_error_panic_hook"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1892,6 +1906,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c520e05135d6e763148b6426a837e239041653ba7becd2e538c076c738025fc"
 
 [[package]]
+name = "pathdiff"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8835116a5c179084a830efb3adc117ab007512b535bc1a21c991d3b32a6b44dd"
+
+[[package]]
 name = "pbkdf2"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2310,6 +2330,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "secrecy"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
+dependencies = [
+ "serde",
+ "zeroize",
+]
+
+[[package]]
 name = "security-framework"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2345,6 +2375,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce31e24b01e1e524df96f1c2fdd054405f8d7376249a5110886fb4b658484789"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-aux"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0a77223b653fa95f3f9864f3eb25b93e4ed170687eb42d85b6b98af21d5e1de"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3323,6 +3364,7 @@ version = "0.1.0"
 dependencies = [
  "arloader",
  "color-eyre",
+ "config",
  "derive_more",
  "futures",
  "hex",
@@ -3330,7 +3372,9 @@ dependencies = [
  "load-dotenv",
  "rand 0.8.5",
  "rand_pcg",
+ "secrecy",
  "serde",
+ "serde-aux",
  "serde_json",
  "serenity",
  "sqlx",
@@ -3339,18 +3383,8 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
- "vrsc 0.0.1",
+ "vrsc",
  "vrsc-rpc",
-]
-
-[[package]]
-name = "vrsc"
-version = "0.0.1"
-dependencies = [
- "bitcoin 0.26.2",
- "bitcoin_hashes 0.10.0",
- "secp256k1 0.19.0",
- "serde",
 ]
 
 [[package]]
@@ -3367,7 +3401,9 @@ dependencies = [
 
 [[package]]
 name = "vrsc-rpc"
-version = "0.0.3"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d0acfec11ba5e6eb00385b8527afdf3e908e43d09be2e9ad839157d28edda8c"
 dependencies = [
  "dirs",
  "jsonrpc",
@@ -3381,14 +3417,16 @@ dependencies = [
 
 [[package]]
 name = "vrsc-rpc-json"
-version = "0.0.3"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af04dc031b9fb5658237a99c37f62339b84ded635656c9b023bcc782f93b0b70"
 dependencies = [
  "bitcoin 0.27.1",
  "hex",
  "serde",
  "serde_json",
  "serde_with",
- "vrsc 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vrsc",
 ]
 
 [[package]]
