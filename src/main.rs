@@ -41,9 +41,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Tracer initialized");
     }
 
-    //load_dotenv!();
+    load_dotenv!();
 
-    let bot_token = std::env::var("DISCORD_TOKEN")?;
+    let bot_token = env!("DISCORD_TOKEN");
     let http = Http::new(&bot_token);
 
     let (owners, bot_id) = match http.get_current_application_info().await {

@@ -8,7 +8,6 @@ use sqlx::postgres::PgConnectOptions;
 pub struct Settings {
     pub trace_level: String,
     pub enable_tracing: bool,
-    pub discord: String,
     pub assets_directory: String,
     pub output_directory: String,
     pub database: Database,

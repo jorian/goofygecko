@@ -22,6 +22,6 @@ WORKDIR /app
 COPY config config 
 COPY --from=builder /app/target/release/verusnft verusnft
 
-ENV APP_ENVIRONMENT production
+# ENV APP_ENVIRONMENT production
 
 ENTRYPOINT [ "./verusnft" ]
