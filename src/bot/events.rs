@@ -64,59 +64,59 @@ impl EventHandler for Handler {
 
             // this process can take a while, so we spawn it in a tokio thread
             // tokio::spawn is parallelism. It hooks into the runtime executor as a new future.
-            tokio::spawn(async move {
-                // path is the location of the NFT image locally.
-                // TODO that path should be a Arweave tx
-                // if let Some(sequence) = next_gecko_number.nextval {
-                match create_nft(user_id, sequence as u64).await {
-                    Ok(nft_builder) => {
-                        // if the creation was ok, there should be a metadata JSON file.
-                        if let Err(e) = sqlx::query!(
-                                "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
-                                user_id as i64,
-                                nft_builder.vrsc_address.to_string()
+            // tokio::spawn(async move {
+            // path is the location of the NFT image locally.
+            // TODO that path should be a Arweave tx
+            // if let Some(sequence) = next_gecko_number.nextval {
+            match super::create_nft(user_id, sequence as u64).await {
+                Ok(nft_builder) => {
+                    // if the creation was ok, there should be a metadata JSON file.
+                    if let Err(e) = sqlx::query!(
+                        "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
+                        user_id as i64,
+                        nft_builder.vrsc_address.to_string()
+                    )
+                    .execute(&pool)
+                    .await
+                    {
+                        error!("Database write error: {:?}", e)
+                    }
+
+                    match new_member.user.create_dm_channel(&ctx).await {
+                        Ok(dm) => {
+                            dm.say(&ctx, "Your NFT is ready!").await.unwrap();
+                            dm.say(
+                                &ctx,
+                                format!(
+                                    "https://arweave.net/{}",
+                                    nft_builder.uploaded_image_tx_hash.unwrap()
+                                ),
                             )
-                            .execute(&pool)
                             .await
-                            {
-                                error!("Database write error: {:?}", e)
+                            .unwrap();
+
+                            if let Some(identity) = nft_builder.identity.as_ref() {
+                                dm.say(&ctx, format!("txid of identity registration: https://testex.verus.io/tx/{}", identity.registration_txid)).await.unwrap();
                             }
 
-                        match new_member.user.create_dm_channel(&ctx).await {
-                            Ok(dm) => {
-                                dm.say(&ctx, "Your NFT is ready!").await.unwrap();
-                                dm.say(
-                                    &ctx,
-                                    format!(
-                                        "https://arweave.net/{}",
-                                        nft_builder.uploaded_image_tx_hash.unwrap()
-                                    ),
-                                )
-                                .await
-                                .unwrap();
-
-                                if let Some(identity) = nft_builder.identity.as_ref() {
-                                    dm.say(&ctx, format!("txid of identity registration: https://testex.verus.io/tx/{}", identity.registration_txid)).await.unwrap();
-                                }
-
-                                // TODO required:
-                                // - image of the NFT (link to arweave)
-                                // arweave::get_image() for the gecko that belongs to user_id
-                                // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
-                                // - tips to show NFT in verusnft discord
-                            }
-                            Err(e) => {
-                                error!("Sending DM to new user error: {:?}", e);
-                            }
+                            // TODO required:
+                            // - image of the NFT (link to arweave)
+                            // arweave::get_image() for the gecko that belongs to user_id
+                            // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
+                            // - tips to show NFT in verusnft discord
+                        }
+                        Err(e) => {
+                            error!("Sending DM to new user error: {:?}", e);
                         }
                     }
-                    Err(e) => {
-                        error!("Something went wrong while creating the NFT: {:?}", e)
-                        // TODO something that notifies me
-                    }
                 }
-                // }
-            }.instrument(info_span!("nft_member_thread")));
+                Err(e) => {
+                    error!("Something went wrong while creating the NFT: {:?}", e)
+                    // TODO something that notifies me
+                }
+            }
+            // }
+            // }.instrument(info_span!("nft_member_thread")));
         }
     }
 
@@ -125,29 +125,29 @@ impl EventHandler for Handler {
     }
 }
 
-async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFTBuilder, ()> {
-    // here is where we need to start generating an NFT.
-    // TODO get config and directory locations from a separate config file.
+// async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFTBuilder, ()> {
+//     // here is where we need to start generating an NFT.
+//     // TODO get config and directory locations from a separate config file.
 
-    let series = String::from("geckotest");
-    info!("creating {} nft #{} for {}", series, sequence, user_id);
-    let nft_builder = crate::nft::VerusNFTBuilder::generate(user_id, sequence, series).await;
+//     let series = String::from("geckotest");
+//     info!("creating {} nft #{} for {}", series, sequence, user_id);
+//     let nft_builder = crate::nft::VerusNFTBuilder::generate(user_id, sequence, series).await;
 
-    // after this is done
+//     // after this is done
 
-    Ok(nft_builder)
+//     Ok(nft_builder)
 
-    // let config_path_buf = Path::new("./assets/config.json");
-    // if config_path_buf.exists() {
-    //     crate::nft::metadata::generate(user_id, &config_path_buf);
-    // } else {
-    //     error!("config file does not exist: {}", config_path_buf.display());
-    // }
-}
+//     // let config_path_buf = Path::new("./assets/config.json");
+//     // if config_path_buf.exists() {
+//     //     crate::nft::metadata::generate(user_id, &config_path_buf);
+//     // } else {
+//     //     error!("config file does not exist: {}", config_path_buf.display());
+//     // }
+// }
 
 #[cfg(test)]
 mod tests {
-    use super::create_nft;
+    use crate::bot::create_nft;
     use rand::{prelude::SliceRandom, Rng};
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]

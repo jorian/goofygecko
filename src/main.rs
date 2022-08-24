@@ -1,27 +1,24 @@
 extern crate verusnftlib;
 
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, pin::Pin, sync::Arc};
 
 use color_eyre::Report;
+use futures::Future;
 use load_dotenv::load_dotenv;
 use serenity::{
     client::{ClientBuilder, Context},
-    framework::standard::{
-        macros::{command, group, hook},
-        CommandResult, DispatchError, StandardFramework,
-    },
+    framework::standard::{macros::hook, DispatchError, StandardFramework},
     http::Http,
     model::{channel::Message, gateway::GatewayIntents},
 };
 use sqlx::PgPool;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, info_span, instrument, Instrument};
 use tracing_subscriber::filter::EnvFilter;
 
-use verusnftlib::bot::{events, utils::config::get_configuration, utils::database::DatabasePool};
-
-#[group]
-#[commands(ping)]
-struct General;
+use uuid::Uuid;
+use verusnftlib::bot::{
+    events, framework::*, utils::config::get_configuration, utils::database::DatabasePool,
+};
 
 #[tokio::main(worker_threads = 8)]
 #[instrument]
@@ -63,9 +60,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let framework = StandardFramework::new()
         .configure(|c| c.prefix("").on_mention(Some(bot_id)).owners(owners))
         .on_dispatch_error(on_dispatch_error)
-        // .before(f) // returns a bool where the value of which will prevent running the event any further
+        // .before(before_hook) // returns a bool where the value of which will prevent running the event any further
         // .after(f)
-        .group(&GENERAL_GROUP);
+        .group(&TEST_GROUP);
 
     let handler = Arc::new(events::Handler {});
 
@@ -107,14 +104,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     Ok(())
 }
 
-#[command]
-async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
-    info!("Message received: {}", &msg.content);
-    info!("{}", msg.author.id);
+#[instrument(skip(_ctx))]
+pub fn before_hook<'fut>(
+    _ctx: &'fut Context,
+    msg: &'fut Message,
+    cmd_name: &'fut str,
+) -> Pin<Box<dyn Future<Output = bool> + Send + 'fut>> {
+    Box::pin(async move {
+        info!("Got command '{}' by user '{}'", cmd_name, msg.author.name);
 
-    msg.reply(ctx, "Pong!").await?;
-
-    Ok(())
+        true
+    })
 }
 
 async fn setup_logging() -> Result<(), Report> {
@@ -124,7 +124,7 @@ async fn setup_logging() -> Result<(), Report> {
     color_eyre::install()?;
 
     if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "serenity=info,verusnft=debug")
+        std::env::set_var("RUST_LOG", "serenity=debug,verusnft=debug")
     }
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
