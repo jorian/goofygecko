@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use serenity::{
     framework::standard::{
         macros::{command, group},
@@ -47,17 +49,18 @@ async fn inner_create_nft(ctx: &Context, msg: &Message) {
         user_id, msg.author.discriminator
     );
 
-    let pool = {
-        let data_read = &ctx.data.read().await;
-        data_read.get::<DatabasePool>().unwrap().clone()
-    };
-
     // get a sequential number to number the new gecko:
     // let sequence = 14;
-    let next_gecko_number = sqlx::query!("SELECT nextval('goofygeckoserial')")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let next_gecko_number = {
+        let pool = {
+            let data_read = &ctx.data.read().await;
+            data_read.get::<DatabasePool>().unwrap().clone()
+        };
+        sqlx::query!("SELECT nextval('goofygeckoserial')")
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+    };
 
     let sequence = next_gecko_number.nextval.unwrap();
 
@@ -71,6 +74,7 @@ async fn inner_create_nft(ctx: &Context, msg: &Message) {
     // if let Some(sequence) = next_gecko_number.nextval {
     match super::create_nft(user_id, sequence as u64).await {
         Ok(nft_builder) => {
+            tokio::time::sleep(Duration::from_secs(100)).await;
             msg.reply(
                 &ctx,
                 format!(

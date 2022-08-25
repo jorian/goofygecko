@@ -55,7 +55,7 @@ impl EventHandler for Handler {
                 .await
                 .unwrap();
 
-            let sequence = next_gecko_number.nextval.unwrap();
+            let sequence = next_gecko_number.nextval.unwrap() + 100;
 
             // debug!(
             //     "the next Gecko number is: {:?}",

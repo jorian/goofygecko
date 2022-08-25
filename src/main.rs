@@ -94,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // start listening on a separate thread and dispatch any events to their own threads.
     // (which means i don't have to care so much about threads!)
-    if let Err(why) = client.start_autosharded().await {
+    if let Err(why) = client.start().await {
         error!(
             "An error occurred while running the discord bot client: {:?}",
             why
