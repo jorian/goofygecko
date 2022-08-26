@@ -4,6 +4,7 @@ use serenity::{
     prelude::{Context, EventHandler},
 };
 use tracing::{debug, error, info, instrument};
+use uuid::Uuid;
 
 use crate::{bot::utils::database::DatabasePool, nft::VerusNFTBuilder};
 
@@ -12,7 +13,10 @@ pub struct Handler {}
 
 #[async_trait]
 impl EventHandler for Handler {
-    #[instrument(skip(ctx))]
+    #[instrument(skip(ctx), fields(
+        request_id = %Uuid::new_v4()
+        
+    ))]
     async fn guild_member_addition(&self, ctx: Context, new_member: Member) {
         let user_id = new_member.user.id.0;
         debug!(

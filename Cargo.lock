@@ -3286,6 +3286,9 @@ name = "uuid"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd6469f4314d5f1ffec476e05f17cc9a78bc7a27a6a857842170bdf8d6f98d2f"
+dependencies = [
+ "getrandom 0.2.6",
+]
 
 [[package]]
 name = "uwl"
@@ -3338,6 +3341,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "uuid 1.1.2",
  "vrsc 0.0.1",
  "vrsc-rpc",
 ]
@@ -3366,7 +3370,7 @@ dependencies = [
 
 [[package]]
 name = "vrsc-rpc"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "dirs",
  "jsonrpc",
@@ -3380,7 +3384,9 @@ dependencies = [
 
 [[package]]
 name = "vrsc-rpc-json"
-version = "0.0.3"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af04dc031b9fb5658237a99c37f62339b84ded635656c9b023bcc782f93b0b70"
 dependencies = [
  "bitcoin 0.27.1",
  "hex",
