@@ -3,7 +3,7 @@ use serenity::{
     model::{guild::Member, prelude::Ready},
     prelude::{Context, EventHandler},
 };
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, instrument, Instrument, info_span};
 use uuid::Uuid;
 
 use crate::{bot::utils::database::DatabasePool, nft::VerusNFTBuilder};
@@ -65,16 +65,16 @@ impl EventHandler for Handler {
                     match create_nft(user_id, sequence as u64).await {
                         Ok(nft_builder) => {
                             // if the creation was ok, there should be a metadata JSON file.
-                            if let Err(e) = sqlx::query!(
-                                "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
-                                user_id as i64,
-                                nft_builder.vrsc_address.to_string()
-                            )
-                            .execute(&pool)
-                            .await
-                            {
-                                error!("Database write error: {:?}", e)
-                            }
+                            // if let Err(e) = sqlx::query!(
+                            //     "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
+                            //     user_id as i64,
+                            //     nft_builder.vrsc_address.to_string()
+                            // )
+                            // .execute(&pool)
+                            // .await
+                            // {
+                            //     error!("Database write error: {:?}", e)
+                            // }
 
                             match new_member.user.create_dm_channel(&ctx).await {
                                 Ok(dm) => {
@@ -106,7 +106,7 @@ impl EventHandler for Handler {
                         }
                     }
                 }
-            });
+            }.instrument(info_span!("new_nft")));
         }
     }
 
