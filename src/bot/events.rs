@@ -283,7 +283,7 @@ impl EventHandler for Handler {
             })
         });
 
-        commands.await;
+        commands.await.unwrap();
         // debug!("{:?}", commands);
     }
 }
@@ -306,16 +306,16 @@ async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFTBuilder, ()> 
     // }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::create_nft;
-    use rand::{prelude::SliceRandom, Rng};
+// #[cfg(test)]
+// mod tests {
+//     use super::create_nft;
+//     use rand::{prelude::SliceRandom, Rng};
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn create_metadata() {
-        let mut rng = rand::thread_rng();
-        let user_id: u64 = rng.gen_range(0..123456789);
+//     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+//     async fn create_metadata() {
+//         let mut rng = rand::thread_rng();
+//         let user_id: u64 = rng.gen_range(0..123456789);
 
-        // let mut join_handles = vec![];
-    }
-}
+//         // let mut join_handles = vec![];
+//     }
+// }

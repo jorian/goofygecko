@@ -14,7 +14,8 @@
       "4c8358.png": 1
     },
     "base": {
-      "blue.png": 90,
+      "blue.png": 40,
+      "red.png": 50,
       "_alchemist:alchemist": {
         "tokay.png": 100
       }

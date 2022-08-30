@@ -4,14 +4,14 @@ use std::sync::Arc;
 
 use color_eyre::Report;
 use load_dotenv::load_dotenv;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 use tracing_subscriber::filter::EnvFilter;
 
 use serenity::{
     client::{Client, Context},
     framework::standard::{
-        macros::{command, group, hook},
-        CommandResult, DispatchError, StandardFramework,
+        macros::{group, hook},
+        DispatchError, StandardFramework,
     },
     model::{channel::Message, gateway::GatewayIntents},
 };
@@ -66,16 +66,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     Ok(())
 }
-
-// #[command]
-// async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
-//     info!("Message received: {}", &msg.content);
-//     info!("{}", msg.author.id);
-
-//     msg.reply(ctx, "Pong!").await?;
-
-//     Ok(())
-// }
 
 async fn setup_logging() -> Result<(), Report> {
     if std::env::var("RUST_LIB_BACKTRACE").is_err() {
