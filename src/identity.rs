@@ -15,7 +15,7 @@ pub struct Identity {
 }
 
 impl<'a> Identity {
-    pub fn builder() -> IdentityBuilder<'a> {
+    pub fn builder() -> IdentityBuilder {
         IdentityBuilder {
             testnet: false,
             currency_name: None,
@@ -30,19 +30,19 @@ impl<'a> Identity {
 }
 
 #[derive(Debug)]
-pub struct IdentityBuilder<'a> {
+pub struct IdentityBuilder {
     testnet: bool,
     currency_name: Option<String>,
     name: Option<String>,
     referral: Option<String>,
     // defaults to 1
     minimum_signatures: Option<u8>,
-    addresses: Option<Vec<&'a Address>>,
+    addresses: Option<Vec<Address>>,
     private_address: Option<String>,
     content_map: Option<Value>,
 }
 
-impl<'a> IdentityBuilder<'a> {
+impl IdentityBuilder {
     pub fn testnet(&mut self, testnet: bool) -> &mut Self {
         self.testnet = testnet;
 
@@ -74,13 +74,13 @@ impl<'a> IdentityBuilder<'a> {
         self
     }
 
-    pub fn add_address(&mut self, address: &'a Address) -> &mut Self {
+    pub fn add_address(&mut self, address: &Address) -> &mut Self {
         match self.addresses.as_mut() {
             Some(vec) => {
-                vec.push(address);
+                vec.push(address.clone());
             }
             None => {
-                self.addresses = Some(vec![address]);
+                self.addresses = Some(vec![address.clone()]);
             }
         }
 
@@ -249,7 +249,7 @@ impl<'a> IdentityBuilder<'a> {
 
         let id_txid = client.registeridentity(
             &namecommitment,
-            self.addresses.clone().unwrap(),
+            self.addresses.as_ref().unwrap(),
             self.minimum_signatures,
             self.private_address.clone(),
             self.currency_name.clone(),

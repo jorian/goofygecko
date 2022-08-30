@@ -1,6 +1,6 @@
 use serenity::{
     async_trait,
-    model::{guild::Member, prelude::Ready},
+    model::{guild::Member, prelude::{Ready, GuildId, command::CommandOptionType, interaction::{InteractionResponseType, Interaction, application_command::CommandDataOptionValue}}},
     prelude::{Context, EventHandler},
 };
 use tracing::{debug, error, info, instrument, Instrument, info_span};
@@ -110,8 +110,165 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn ready(&self, _ctx: Context, ready: Ready) {
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        if let Interaction::ApplicationCommand(command) = interaction {
+            println!("Received command interaction: {:#?}", command);
+
+            let content = match command.data.name.as_str() {
+                "ping" => "Hey, I'm alive!".to_string(),
+                "id" => {
+                    let options = command
+                        .data
+                        .options
+                        .get(0)
+                        .expect("Expected user option")
+                        .resolved
+                        .as_ref()
+                        .expect("Expected user object");
+
+                    if let CommandDataOptionValue::User(user, _member) = options {
+                        format!("{}'s id is {}", user.tag(), user.id)
+                    } else {
+                        "Please provide a valid user".to_string()
+                    }
+                },
+                "attachmentinput" => {
+                    let options = command
+                        .data
+                        .options
+                        .get(0)
+                        .expect("Expected attachment option")
+                        .resolved
+                        .as_ref()
+                        .expect("Expected attachment object");
+
+                    if let CommandDataOptionValue::Attachment(attachment) = options {
+                        format!(
+                            "Attachment name: {}, attachment size: {}",
+                            attachment.filename, attachment.size
+                        )
+                    } else {
+                        "Please provide a valid attachment".to_string()
+                    }
+                },
+                _ => "not implemented :(".to_string(),
+            };
+
+            if let Err(why) = command
+                .create_interaction_response(&ctx.http, |response| {
+                    response
+                        .kind(InteractionResponseType::ChannelMessageWithSource)
+                        .interaction_response_data(|message| message.content(content))
+                })
+                .await
+            {
+                println!("Cannot respond to slash command: {}", why);
+            }
+        }
+    }
+    
+    async fn ready(&self, ctx: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
+        
+        let guild_id = GuildId(
+            std::env::var("GUILD_ID").expect("Expected GUILD_ID in env")
+            .parse().expect("GUILD_ID must be an integer")
+        );
+
+        let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
+            commands.create_application_command(|cmd| {
+                cmd.name("ping").description("ping me")
+            })
+            .create_application_command(|command| {
+                command.name("id").description("Get a user id").create_option(|option| {
+                    option
+                        .name("id")
+                        .description("The user to lookup")
+                        .kind(CommandOptionType::User)
+                        .required(true)
+                })
+            })
+            .create_application_command(|command| {
+                command
+                    .name("welcome")
+                    .name_localized("de", "begrüßen")
+                    .description("Welcome a user")
+                    .description_localized("de", "Einen Nutzer begrüßen")
+                    .create_option(|option| {
+                        option
+                            .name("user")
+                            .name_localized("de", "nutzer")
+                            .description("The user to welcome")
+                            .description_localized("de", "Der zu begrüßende Nutzer")
+                            .kind(CommandOptionType::User)
+                            .required(true)
+                    })
+                    .create_option(|option| {
+                        option
+                            .name("message")
+                            .name_localized("de", "nachricht")
+                            .description("The message to send")
+                            .description_localized("de", "Die versendete Nachricht")
+                            .kind(CommandOptionType::String)
+                            .required(true)
+                            .add_string_choice_localized(
+                                "Welcome to our cool server! Ask me if you need help",
+                                "pizza",
+                                [("de", "Willkommen auf unserem coolen Server! Frag mich, falls du Hilfe brauchst")]
+                            )
+                            .add_string_choice_localized(
+                                "Hey, do you want a coffee?",
+                                "coffee",
+                                [("de", "Hey, willst du einen Kaffee?")],
+                            )
+                            .add_string_choice_localized(
+                                "Welcome to the club, you're now a good person. Well, I hope.",
+                                "club",
+                                [("de", "Willkommen im Club, du bist jetzt ein guter Mensch. Naja, hoffentlich.")],
+                            )
+                            .add_string_choice_localized(
+                                "I hope that you brought a controller to play together!",
+                                "game",
+                                [("de", "Ich hoffe du hast einen Controller zum Spielen mitgebracht!")],
+                            )
+                    })
+            })
+            .create_application_command(|command| {
+                command
+                    .name("numberinput")
+                    .description("Test command for number input")
+                    .create_option(|option| {
+                        option
+                            .name("int")
+                            .description("An integer from 5 to 10")
+                            .kind(CommandOptionType::Integer)
+                            .min_int_value(5)
+                            .max_int_value(10)
+                            .required(true)
+                    })
+                    .create_option(|option| {
+                        option
+                            .name("number")
+                            .description("A float from -3.3 to 234.5")
+                            .kind(CommandOptionType::Number)
+                            .min_number_value(-3.3)
+                            .max_number_value(234.5)
+                            .required(true)
+                    })
+            })
+            .create_application_command(|command| {
+                command
+                    .name("attachmentinput")
+                    .description("Test command for attachment input")
+                    .create_option(|option| {
+                        option
+                            .name("attachment")
+                            .description("A file")
+                            .kind(CommandOptionType::Attachment)
+                            .required(true)
+                    })
+            })
+        });
     }
 }
 
@@ -122,8 +279,6 @@ async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFTBuilder, ()> 
     let series = String::from("geckotest");
     info!("creating {} nft #{} for {}", series, sequence, user_id);
     let nft_builder = crate::nft::VerusNFTBuilder::generate(user_id, sequence, series).await;
-
-    // after this is done
 
     Ok(nft_builder)
 
@@ -145,19 +300,6 @@ mod tests {
         let mut rng = rand::thread_rng();
         let user_id: u64 = rng.gen_range(0..123456789);
 
-        let mut join_handles = vec![];
-
-        for i in 0..10 {
-            join_handles.push(tokio::spawn(async move {
-                create_nft(user_id + i, i).await.unwrap();
-            }))
-        }
-
-        join_handles.shuffle(&mut rng);
-
-        let _ = futures::future::try_join_all(join_handles).await;
-        // tokio::spawn(async move {
-        //     join!(join_handles);
-        // });
+        // let mut join_handles = vec![];
     }
 }
