@@ -19,7 +19,7 @@ use serenity::{
 use verusnftlib::bot::{events, utils, utils::database::DatabasePool};
 
 #[group]
-#[commands(ping)]
+// #[commands(ping)]
 struct General;
 
 #[tokio::main(worker_threads = 8)]
@@ -67,15 +67,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     Ok(())
 }
 
-#[command]
-async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
-    info!("Message received: {}", &msg.content);
-    info!("{}", msg.author.id);
+// #[command]
+// async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
+//     info!("Message received: {}", &msg.content);
+//     info!("{}", msg.author.id);
 
-    msg.reply(ctx, "Pong!").await?;
+//     msg.reply(ctx, "Pong!").await?;
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 async fn setup_logging() -> Result<(), Report> {
     if std::env::var("RUST_LIB_BACKTRACE").is_err() {

@@ -1,9 +1,18 @@
 use serenity::{
     async_trait,
-    model::{guild::Member, prelude::{Ready, GuildId, command::CommandOptionType, interaction::{InteractionResponseType, Interaction, application_command::CommandDataOptionValue}}},
+    model::{
+        guild::Member,
+        prelude::{
+            command::CommandOptionType,
+            interaction::{
+                application_command::CommandDataOptionValue, Interaction, InteractionResponseType,
+            },
+            GuildId, Ready,
+        },
+    },
     prelude::{Context, EventHandler},
 };
-use tracing::{debug, error, info, instrument, Instrument, info_span};
+use tracing::{debug, error, info, info_span, instrument, Instrument};
 use uuid::Uuid;
 
 use crate::{bot::utils::database::DatabasePool, nft::VerusNFTBuilder};
@@ -15,7 +24,6 @@ pub struct Handler {}
 impl EventHandler for Handler {
     #[instrument(skip(ctx), fields(
         request_id = %Uuid::new_v4()
-        
     ))]
     async fn guild_member_addition(&self, ctx: Context, new_member: Member) {
         let user_id = new_member.user.id.0;
@@ -58,61 +66,64 @@ impl EventHandler for Handler {
 
             // this process can take a while, so we spawn it in a tokio thread
             // tokio::spawn is parallelism. It hooks into the runtime executor as a new future.
-            tokio::spawn(async move {
-                // path is the location of the NFT image locally.
-                // TODO that path should be a Arweave tx
-                if let Some(sequence) = next_gecko_number.nextval {
-                    match create_nft(user_id, sequence as u64).await {
-                        Ok(nft_builder) => {
-                            // if the creation was ok, there should be a metadata JSON file.
-                            // if let Err(e) = sqlx::query!(
-                            //     "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
-                            //     user_id as i64,
-                            //     nft_builder.vrsc_address.to_string()
-                            // )
-                            // .execute(&pool)
-                            // .await
-                            // {
-                            //     error!("Database write error: {:?}", e)
-                            // }
+            tokio::spawn(
+                async move {
+                    // path is the location of the NFT image locally.
+                    // TODO that path should be a Arweave tx
+                    if let Some(sequence) = next_gecko_number.nextval {
+                        match create_nft(user_id, sequence as u64).await {
+                            Ok(nft_builder) => {
+                                // if the creation was ok, there should be a metadata JSON file.
+                                // if let Err(e) = sqlx::query!(
+                                //     "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
+                                //     user_id as i64,
+                                //     nft_builder.vrsc_address.to_string()
+                                // )
+                                // .execute(&pool)
+                                // .await
+                                // {
+                                //     error!("Database write error: {:?}", e)
+                                // }
 
-                            match new_member.user.create_dm_channel(&ctx).await {
-                                Ok(dm) => {
-                                    dm.say(&ctx, "Your NFT is ready!").await.unwrap();
-                                    dm.say(
-                                        &ctx,
-                                        format!(
-                                            "https://arweave.net/{}",
-                                            nft_builder.uploaded_image_tx_hash.unwrap()
-                                        ),
-                                    )
-                                    .await
-                                    .unwrap();
+                                match new_member.user.create_dm_channel(&ctx).await {
+                                    Ok(dm) => {
+                                        dm.say(&ctx, "Your NFT is ready!").await.unwrap();
+                                        dm.say(
+                                            &ctx,
+                                            format!(
+                                                "https://arweave.net/{}",
+                                                nft_builder.uploaded_image_tx_hash.unwrap()
+                                            ),
+                                        )
+                                        .await
+                                        .unwrap();
 
-                                    // TODO required:
-                                    // - image of the NFT (link to arweave)
-                                    // arweave::get_image() for the gecko that belongs to user_id
-                                    // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
-                                    // - tips to show NFT in verusnft discord
-                                }
-                                Err(e) => {
-                                    error!("Sending DM to new user error: {:?}", e);
+                                        // TODO required:
+                                        // - image of the NFT (link to arweave)
+                                        // arweave::get_image() for the gecko that belongs to user_id
+                                        // - name of the NFT (get previously stored database item (SELECT name FROM nft_names WHERE user_id = 'new_member.user.id'))
+                                        // - tips to show NFT in verusnft discord
+                                    }
+                                    Err(e) => {
+                                        error!("Sending DM to new user error: {:?}", e);
+                                    }
                                 }
                             }
-                        }
-                        Err(e) => {
-                            error!("Something went wrong while creating the NFT: {:?}", e)
-                            // TODO something that notifies me
+                            Err(e) => {
+                                error!("Something went wrong while creating the NFT: {:?}", e)
+                                // TODO something that notifies me
+                            }
                         }
                     }
                 }
-            }.instrument(info_span!("new_nft")));
+                .instrument(info_span!("new_nft")),
+            );
         }
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
-            println!("Received command interaction: {:#?}", command);
+            // println!("Received command interaction: {:#?}", command);
 
             let content = match command.data.name.as_str() {
                 "ping" => "Hey, I'm alive!".to_string(),
@@ -131,7 +142,7 @@ impl EventHandler for Handler {
                     } else {
                         "Please provide a valid user".to_string()
                     }
-                },
+                }
                 "attachmentinput" => {
                     let options = command
                         .data
@@ -150,7 +161,7 @@ impl EventHandler for Handler {
                     } else {
                         "Please provide a valid attachment".to_string()
                     }
-                },
+                }
                 _ => "not implemented :(".to_string(),
             };
 
@@ -166,13 +177,15 @@ impl EventHandler for Handler {
             }
         }
     }
-    
+
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
-        
+
         let guild_id = GuildId(
-            std::env::var("GUILD_ID").expect("Expected GUILD_ID in env")
-            .parse().expect("GUILD_ID must be an integer")
+            std::env::var("GUILD_ID")
+                .expect("Expected GUILD_ID in env")
+                .parse()
+                .expect("GUILD_ID must be an integer"),
         );
 
         let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
@@ -269,6 +282,9 @@ impl EventHandler for Handler {
                     })
             })
         });
+
+        commands.await;
+        // debug!("{:?}", commands);
     }
 }
 
