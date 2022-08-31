@@ -16,7 +16,11 @@ use serenity::{
     model::{channel::Message, gateway::GatewayIntents},
 };
 
-use verusnftlib::bot::{events, utils, utils::database::DatabasePool};
+use verusnftlib::bot::{
+    events,
+    utils::database::DatabasePool,
+    utils::{self, database::GuildId},
+};
 
 #[group]
 struct General;
@@ -51,7 +55,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut data = client.data.write().await;
 
         let pg_pool = utils::database::obtain_postgres_pool(&config.database).await?;
+        sqlx::migrate!("./migrations").run(&pg_pool).await?;
         data.insert::<DatabasePool>(pg_pool);
+
+        let guild_id = config.application.discord_guild_id.clone();
+        data.insert::<GuildId>(guild_id);
     }
 
     debug!("starting client");

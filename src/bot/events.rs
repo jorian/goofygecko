@@ -8,7 +8,7 @@ use serenity::{
 use tracing::{debug, error, info, info_span, instrument, Instrument};
 use uuid::Uuid;
 
-use crate::{bot::utils::database::DatabasePool, nft::VerusNFTBuilder};
+use crate::{bot::utils::database::{DatabasePool, GuildId}, nft::VerusNFTBuilder};
 
 #[derive(Debug)]
 pub struct Handler {}
@@ -100,7 +100,9 @@ impl EventHandler for Handler {
                                         .await
                                         .unwrap();
 
-                                        let guild_id = std::env::var("GUILD_ID").expect("A guild_id env var");
+                                        let data_read = ctx.data.read().await;
+                                        let guild_id = data_read.get::<GuildId>().unwrap().clone();
+
                                         for channel in &ctx.http.get_channels(guild_id.parse().unwrap()).await.unwrap() {
                                             debug!("{:?}", channel.name);
 

@@ -9,6 +9,12 @@ impl TypeMapKey for DatabasePool {
     type Value = PgPool;
 }
 
+pub struct GuildId;
+
+impl TypeMapKey for GuildId {
+    type Value = String;
+}
+
 // This function obtains a database connection to the postgresql database used for the bot.
 pub async fn obtain_postgres_pool(
     db_settings: &DatabaseSettings,
