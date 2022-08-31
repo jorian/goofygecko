@@ -19,7 +19,6 @@ use serenity::{
 use verusnftlib::bot::{events, utils, utils::database::DatabasePool};
 
 #[group]
-// #[commands(ping)]
 struct General;
 
 #[tokio::main(worker_threads = 8)]

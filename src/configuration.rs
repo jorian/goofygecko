@@ -48,6 +48,8 @@ pub struct ApplicationSettings {
     pub enable_tracing: bool,
     pub discord: Secret<String>,
     pub discord_guild_id: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub sequence_start: u64,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
