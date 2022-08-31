@@ -18,7 +18,7 @@ use serenity::{
 
 use verusnftlib::bot::{
     events,
-    utils::database::DatabasePool,
+    utils::database::{DatabasePool, SequenceStart},
     utils::{self, database::GuildId},
 };
 
@@ -59,7 +59,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         data.insert::<DatabasePool>(pg_pool);
 
         let guild_id = config.application.discord_guild_id.clone();
-        data.insert::<GuildId>(guild_id);
+        data.insert::<GuildId>(guild_id.parse()?);
+
+        let sequence_start = config.application.sequence_start;
+        data.insert::<SequenceStart>(sequence_start as i64);
     }
 
     debug!("starting client");

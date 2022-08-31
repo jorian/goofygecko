@@ -8,7 +8,7 @@ use serenity::{
 use tracing::{debug, error, info, info_span, instrument, Instrument};
 use uuid::Uuid;
 
-use crate::{bot::utils::database::{DatabasePool, GuildId}, nft::VerusNFTBuilder};
+use crate::{bot::utils::database::{DatabasePool, GuildId, SequenceStart}, nft::VerusNFTBuilder};
 
 #[derive(Debug)]
 pub struct Handler {}
@@ -38,10 +38,6 @@ impl EventHandler for Handler {
         .await
         .unwrap();
 
-        // TODO let config_location = sqlx::query!(
-        //     // get the latest config from the database
-        // );
-
         if let Some(row) = data {
             debug!("a member entered that previously entered; ignore")
         } else {
@@ -64,7 +60,10 @@ impl EventHandler for Handler {
                     // path is the location of the NFT image locally.
                     // TODO that path should be a Arweave tx
                     if let Some(sequence) = next_gecko_number.nextval {
-                        let sequence = sequence + 100;
+                        let data_read = ctx.data.read().await;
+                        let sequence_start = data_read.get::<SequenceStart>().unwrap().clone();
+
+                        let sequence = sequence + sequence_start;
                         match create_nft(user_id, sequence as u64).await {
                             Ok(nft_builder) => {
                                 // if the creation was ok, there should be a metadata JSON file.
@@ -103,23 +102,20 @@ impl EventHandler for Handler {
                                         let data_read = ctx.data.read().await;
                                         let guild_id = data_read.get::<GuildId>().unwrap().clone();
 
-                                        for channel in &ctx.http.get_channels(guild_id.parse().unwrap()).await.unwrap() {
-                                            debug!("{:?}", channel.name);
+                                        let channels = ctx.http.get_channels(guild_id).await.unwrap();
+                                        let channel = channels.iter().find(|c| c.name == "general").expect("could not find 'general' channel");
 
-                                            if channel.name == "general" {
-                                                channel.send_message(&ctx.http, |m| {
-                                                    m.embed(|e| {
-                                                        e.title(format!("Introducing testgecko #{}", nft_builder.sequence))
-                                                        .description(format!("**Rarity:** {}\n**Price:** {} VRSC", 23, 12))
-                                                        .field("Transaction", format!("[view](https://v2.viewblock.io/arweave/tx/{})", nft_builder.uploaded_image_tx_hash.as_ref().unwrap()), true)
-                                                        .field("Metadata", format!("[view](https://v2.viewblock.io/arweave/tx/{})", nft_builder.uploaded_metadata_tx_hash.as_ref().unwrap()), true)
-                                                        .image(format!(
-                                                            "https://arweave.net/{}",
-                                                            &nft_builder.uploaded_image_tx_hash.as_ref().unwrap()
-                                                    ))})
-                                                }).await.unwrap();
-                                            }
-                                        }
+                                        channel.send_message(&ctx.http, |m| {
+                                            m.embed(|e| {
+                                                e.title(format!("Introducing testgecko #{}", nft_builder.sequence))
+                                                .description(format!("**Rarity:** {}\n**Price:** {} VRSC", 23, 12))
+                                                .field("Transaction", format!("[view](https://v2.viewblock.io/arweave/tx/{})", nft_builder.uploaded_image_tx_hash.as_ref().unwrap()), true)
+                                                .field("Metadata", format!("[view](https://v2.viewblock.io/arweave/tx/{})", nft_builder.uploaded_metadata_tx_hash.as_ref().unwrap()), true)
+                                                .image(format!(
+                                                    "https://arweave.net/{}",
+                                                    &nft_builder.uploaded_image_tx_hash.as_ref().unwrap()
+                                            ))})
+                                        }).await.unwrap();
 
                                         // TODO required:
                                         // - image of the NFT (link to arweave)
