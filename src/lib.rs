@@ -6,6 +6,7 @@ extern crate derive_more;
 extern crate hex;
 
 pub mod bot;
+pub mod configuration;
 mod identity;
 mod nft;
 mod trader;

@@ -3,7 +3,7 @@ extern crate verusnftlib;
 use std::sync::Arc;
 
 use color_eyre::Report;
-use load_dotenv::load_dotenv;
+use secrecy::ExposeSecret;
 use tracing::{debug, error, instrument};
 use tracing_subscriber::filter::EnvFilter;
 
@@ -25,7 +25,8 @@ struct General;
 #[tokio::main(worker_threads = 8)]
 #[instrument]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    load_dotenv!();
+    let config =
+        verusnftlib::configuration::get_configuration().expect("failed to read configuration");
 
     setup_logging().await?;
 
@@ -34,14 +35,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .on_dispatch_error(on_dispatch_error)
         .group(&GENERAL_GROUP);
 
-    let token = env!("DISCORD_TOKEN");
     let handler = Arc::new(events::Handler {});
 
     let mut intents = GatewayIntents::all();
     intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
     intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
 
-    let mut client = Client::builder(token, intents)
+    let mut client = Client::builder(config.application.discord.expose_secret(), intents)
         .event_handler_arc(handler.clone())
         .framework(framework)
         .await
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // in a block to close the write borrow
         let mut data = client.data.write().await;
 
-        let pg_pool = utils::database::obtain_postgres_pool().await?;
+        let pg_pool = utils::database::obtain_postgres_pool(&config.database).await?;
         data.insert::<DatabasePool>(pg_pool);
     }
 

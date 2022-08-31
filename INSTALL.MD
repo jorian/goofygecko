@@ -1,3 +1,9 @@
+## Config
+
+Depending on the environment, you need to add certain config files in a folder in the root directory of this project: `verusnft/config/`. In this folder, there needs to be at least a `base.toml` and, depending on the environment, `local.toml`, `development.toml` and `production.toml`.
+
+Check `configuration.rs` to find out which variables are required.
+
 ## Setup
 
 First we need Docker.
