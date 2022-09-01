@@ -1,5 +1,25 @@
 {
   "db": "PostgreSQL",
+  "3386ae2389408c8e7b3948ce3878d3ed6ce73738a4125ca5d2499b3034d9ad7d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "vrsc_address",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT vrsc_address FROM user_register WHERE discord_user_id = $1"
+  },
   "5c7fe2c11aba430b20e6598378d540affe5ad8ebb182b0d3e9812378f29aa768": {
     "describe": {
       "columns": [
@@ -17,19 +37,6 @@
       }
     },
     "query": "SELECT nextval('goofygeckoserial')"
-  },
-  "753c9f9fd97fda3ca79c725e37c9e7d0e61a5f43519a433fdffd9ebd3d058a30": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Varchar"
-        ]
-      }
-    },
-    "query": "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)"
   },
   "e0aa9543938bdcc0eb3b2bf571137726c0a6ebb3e64a3a612e976b4a7cb64635": {
     "describe": {

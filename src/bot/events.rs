@@ -1,14 +1,14 @@
 use serenity::{
     async_trait,
     model::{
-        guild::Member,
+        id::GuildId, guild::Member, application::{interaction::Interaction}, prelude::Ready,
     },
     prelude::{Context, EventHandler},
 };
 use tracing::{debug, error, info, info_span, instrument, Instrument};
 use uuid::Uuid;
 
-use crate::{bot::utils::database::{DatabasePool, GuildId, SequenceStart}, nft::VerusNFTBuilder};
+use crate::{bot::utils::database::{DatabasePool, GuildId as GId, SequenceStart}, nft::VerusNFTBuilder};
 
 #[derive(Debug)]
 pub struct Handler {}
@@ -100,7 +100,7 @@ impl EventHandler for Handler {
                                         .unwrap();
 
                                         let data_read = ctx.data.read().await;
-                                        let guild_id = data_read.get::<GuildId>().unwrap().clone();
+                                        let guild_id = data_read.get::<GId>().unwrap().clone();
 
                                         let channels = ctx.http.get_channels(guild_id).await.unwrap();
                                         let channel = channels.iter().find(|c| c.name == "general").expect("could not find 'general' channel");
@@ -139,6 +139,53 @@ impl EventHandler for Handler {
             );
         }
     }
+
+    #[instrument(skip(ctx), fields(
+        request_id = %Uuid::new_v4()
+    ))]
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        if let Interaction::ApplicationCommand(command) = interaction {
+            info!("received command interaction: {:?}", command);
+
+            match command.data.name.as_str() {
+                "list" => {
+                    
+                    let data_read = ctx.data.read().await;
+                    let pg_pool = data_read.get::<DatabasePool>().clone().unwrap();
+                
+
+                    let current_user = ctx.http.get_current_user().await.unwrap().id.0;
+
+                    let query = sqlx::query!("SELECT vrsc_address FROM user_register WHERE discord_user_id = $1", current_user as i64)
+                        .fetch_optional(pg_pool)
+                        .await
+                        .unwrap();
+
+                    debug!("{:#?}", query);
+                },
+                _ => {}
+                
+            };
+
+        }
+    }
+
+    async fn ready(&self, ctx: Context, ready: Ready) {
+        let guild_id = {
+            let data_read = ctx.data.read().await;
+            GuildId(*data_read.get::<GId>().unwrap())
+        };
+
+        let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
+            commands.create_application_command(|cmd| {
+                cmd.name("list").description("List all my NFTs")
+            });
+
+            commands
+
+        }).await;
+    }
+
 }
 
 async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFTBuilder, ()> {

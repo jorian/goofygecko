@@ -33,6 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     setup_logging().await?;
 
+    debug!("{}", config.database.connection_string());
+
     let framework = StandardFramework::new()
         .configure(|c| c.prefix("!")) // set the bot's prefix to "!"
         .on_dispatch_error(on_dispatch_error)
