@@ -1,6 +1,6 @@
 extern crate verusnftlib;
 
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use color_eyre::Report;
 use secrecy::ExposeSecret;
@@ -32,6 +32,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         verusnftlib::configuration::get_configuration().expect("failed to read configuration");
 
     setup_logging().await?;
+
+    // check for running VRSC
+
+    // check if ardrive wallet exists
+    if !Path::new(".ardrivewallet.json").exists() {
+        error!("ardrivewallet not found");
+        return Ok(());
+    }
 
     debug!("{}", config.database.connection_string());
 

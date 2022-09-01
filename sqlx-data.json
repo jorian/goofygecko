@@ -38,6 +38,19 @@
     },
     "query": "SELECT nextval('goofygeckoserial')"
   },
+  "753c9f9fd97fda3ca79c725e37c9e7d0e61a5f43519a433fdffd9ebd3d058a30": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Varchar"
+        ]
+      }
+    },
+    "query": "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)"
+  },
   "e0aa9543938bdcc0eb3b2bf571137726c0a6ebb3e64a3a612e976b4a7cb64635": {
     "describe": {
       "columns": [
