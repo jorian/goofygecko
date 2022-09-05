@@ -34,9 +34,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     setup_logging().await?;
 
-    // check for running VRSC
-
-    // check if ardrive wallet exists
     if !Path::new(".ardrivewallet.json").exists() {
         error!("ardrivewallet not found");
         return Ok(());

@@ -7,6 +7,7 @@ use serenity::{
 };
 use tracing::{debug, error, info, info_span, instrument, Instrument};
 use uuid::Uuid;
+use vrsc_rpc::{Client, Auth, RpcApi};
 
 use crate::{bot::utils::database::{DatabasePool, GuildId as GId, SequenceStart}, nft::VerusNFTBuilder};
 
@@ -153,8 +154,8 @@ impl EventHandler for Handler {
                     let data_read = ctx.data.read().await;
                     let pg_pool = data_read.get::<DatabasePool>().clone().unwrap();
                 
-
-                    let current_user = ctx.http.get_current_user().await.unwrap().id.0;
+                    let current_user = command.user.id.0;
+                    debug!("current user: {}", current_user);
 
                     let query = sqlx::query!("SELECT vrsc_address FROM user_register WHERE discord_user_id = $1", current_user as i64)
                         .fetch_optional(pg_pool)
@@ -162,6 +163,23 @@ impl EventHandler for Handler {
                         .unwrap();
 
                     debug!("{:#?}", query);
+                
+                    let address = query
+                        .expect("some record for this user")
+                        .vrsc_address
+                        .expect("an address for this user");
+
+                    // we now have the connection between the discord user and the primary address for this user. Let's use the new RPC to find out which identities are controlled with this primary address:
+                    let client = Client::chain("vrsctest", Auth::ConfigFile, None).expect("A verus daemon client");
+                    let identities_with_address = client.get_identities_with_address(&address, None, None, None).expect("An array of identities");
+
+                    debug!("{:?}", identities_with_address);
+
+                    for identity in identities_with_address {
+                        command.create_interaction_response(&ctx.http, |response| {
+                            response.interaction_response_data(|data| data.content(format!("#{}", identity.name)))
+                        }).await.expect("a response to a /list interaction");
+                    }
                 },
                 _ => {}
                 
@@ -182,7 +200,6 @@ impl EventHandler for Handler {
             });
 
             commands
-
         }).await;
     }
 
