@@ -21,6 +21,7 @@ use verusnftlib::bot::{
     utils::database::{DatabasePool, SequenceStart},
     utils::{self, database::GuildId},
 };
+use vrsc_rpc::{Auth, RpcApi};
 
 #[group]
 struct General;
@@ -38,6 +39,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // check if ardrive wallet exists
     if !Path::new(".ardrivewallet.json").exists() {
         error!("ardrivewallet not found");
+        return Ok(());
+    }
+
+    let client = vrsc_rpc::Client::chain("vrsctest", Auth::ConfigFile, None).expect("A client");
+    if let Err(e) = client.ping() {
+        error!("Verus daemon not ready: {:?}", e);
         return Ok(());
     }
 

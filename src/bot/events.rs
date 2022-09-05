@@ -140,7 +140,7 @@ impl EventHandler for Handler {
         }
     }
 
-    #[instrument(skip(ctx), fields(
+    #[instrument(skip(ctx, interaction), fields(
         request_id = %Uuid::new_v4()
     ))]
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
