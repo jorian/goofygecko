@@ -4,30 +4,30 @@
   "description": "A VerusNFT PoC",
   "attributes": {
     "_alchemist": {
-      "alchemist": 50,
-      "non-alchemist": 50
+      "alchemist": 0.1,
+      "non-alchemist": 0.9
     },
     "background": {
-      "8989bf.png": 33,
-      "bdb50d.png": 33,
-      "fbf236.png": 33,
-      "4c8358.png": 1
+      "8989bf.png": 0.33,
+      "bdb50d.png": 0.33,
+      "fbf236.png": 0.33,
+      "4c8358.png": 0.01
     },
     "base": {
-      "blue.png": 40,
-      "red.png": 50,
+      "blue.png": 0.4,
+      "red.png": 0.5,
       "_alchemist:alchemist": {
-        "tokay.png": 100
+        "tokay.png": 1.0
       }
     },
     "eye": {
-      "normal.png": 100
+      "normal.png": 1.0
     },
     "tongue": {
-      "normal.png": 100
+      "normal.png": 1.0
     },
     "test": {
-      "test.png": 100
+      "test.png": 1.0
     }
   }
 }

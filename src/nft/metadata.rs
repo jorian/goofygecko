@@ -52,14 +52,9 @@ async fn generate_attributes(
                     let good_match = raw_key.split("|").all(|k| {
                         let (key, value) = k.split_once(":").unwrap_or(("_key", k));
 
-                        if attributes
+                        attributes
                             .iter()
                             .any(|t: &Trait| t.trait_type == key && t.value == value)
-                        {
-                            return true;
-                        } else {
-                            return false;
-                        }
                     });
 
                     if good_match {
@@ -71,6 +66,9 @@ async fn generate_attributes(
             }
         }
 
+        // if there is no subattribute, just use the list of the other attributes and skip keyed ones as they
+        // didn't match so they don't belong here.
+        // the RNG simply didn't pick the keyed attribute (in the Vec<Trait>) so it must select among the standard attributes.
         if subattribute.is_empty() {
             for (k, a) in keys {
                 match a {
@@ -98,7 +96,10 @@ fn calculate_rng_for_attribute(
     debug!("choices: {:?}", choices);
     debug!("weights: {:?}", weights);
 
-    let dist = WeightedIndex::new(weights)
+    let sum_of_weights: f32 = weights.iter().fold(0.0, |acc, x| acc + *x);
+    debug!("sum of weights: {}", sum_of_weights);
+
+    let dist = WeightedIndex::new(weights.clone())
         .expect("Could not create weighted index, are any odds less than 0?");
 
     let result = dist.sample(rng);
@@ -111,30 +112,36 @@ fn calculate_rng_for_attribute(
 
     debug!(name);
 
+    let chosen_weight = weights[result];
+    // let rarity = chosen_weight * sum_of_weights;
+
     attributes.push(Trait {
         trait_type: attribute_name.to_string(),
         value: name.to_string(),
+        rarity: *chosen_weight,
     });
 }
 
 fn create_metadata(
     user_id: u64,
     sequence: u64,
-    mut attributes: Vec<Trait>,
+    attributes: Vec<Trait>,
     config: &config::Config,
     output_directory: &Path,
 ) {
     let image_name = &format!("{}.png", user_id);
+    // let mut rarity = attributes.product
     let generated_metadata = NFTMetadata {
         name: &format!("{} #{}", &config.name, sequence),
         identity: &format!("{}.{}", sequence, &config.identity),
         description: &config.description,
+        rarity: attributes.iter().fold(1.0, |acc, x| acc * x.rarity),
         image: image_name,
         edition: 0,
-        attributes: attributes
-            .drain(..)
-            .filter(|attribute| !attribute.trait_type.starts_with("_"))
-            .collect(),
+        attributes, //: attributes
+        // .drain(..)
+        // .filter(|attribute| !attribute.trait_type.starts_with("_"))
+        // .collect(),
         properties: Properties {
             files: vec![PropertyFile {
                 uri: image_name,
@@ -148,7 +155,7 @@ fn create_metadata(
         user_id,
         &serde_json::to_string(&generated_metadata).expect("Could not serialize generated JSON"),
         output_directory,
-    )
+    );
 }
 
 fn write_metadata(id: u64, data: &str, output_directory: &Path) {
@@ -169,6 +176,7 @@ pub struct NFTMetadata<'a> {
     name: &'a str,
     identity: &'a str,
     description: &'a str,
+    rarity: f32,
     image: &'a str,
     edition: u16,
     pub attributes: Vec<Trait>,
@@ -179,6 +187,7 @@ pub struct NFTMetadata<'a> {
 pub struct Trait {
     pub trait_type: String,
     pub value: String,
+    pub rarity: f32,
 }
 
 #[derive(Serialize, Deserialize)]

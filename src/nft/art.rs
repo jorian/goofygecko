@@ -55,11 +55,12 @@ fn create_image(id: u64, metadata: &NFTMetadata, assets_directory: &Path, output
             "Layer is not valid path at {}",
             layer_path_buffer.display()
         ));
-        if !layer_path_buffer.exists() {
-            panic!("Layer does not exist at path {}", layer_path);
+        if layer_path_buffer.exists() {
+            // if the path does not exist, the attribute was not meant to be a layer in the image; it was solely
+            // meant as a selector of subattributes.
+            // This means that the assets guide the image, not the metadata.
+            layers.push(layer_path.replace(" ", "\\ ")); // Escape spaces in path
         }
-
-        layers.push(layer_path.replace(" ", "\\ ")); // Escape spaces in path
     }
 
     composite_command

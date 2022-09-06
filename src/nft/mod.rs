@@ -47,6 +47,7 @@ pub struct VerusNFT {
     pub vrsc_address: Address,
     pub sequence: u64,
     pub edition: String,
+    pub rarity: f64,
     pub generated_image_path: Option<PathBuf>,
     pub generated_metadata_path: Option<PathBuf>,
     pub uploaded_image_tx_hash: Option<String>,
@@ -70,6 +71,7 @@ impl VerusNFT {
             vrsc_address: address,
             sequence,
             edition: series,
+            rarity: 0.0,
             generated_metadata_path: None,
             generated_image_path: None,
             uploaded_image_tx_hash: None,
@@ -149,7 +151,7 @@ impl VerusNFT {
         }
     }
 
-    async fn update_metadata(&self) {
+    async fn update_metadata(&mut self) {
         // self.metadata
         // self.image_hash
         // put image_hash in metadata.
@@ -157,12 +159,17 @@ impl VerusNFT {
         // read metadata file
         // update `image` key with actual location on Arweave
         // save metadata file
+        if let Some(path) = self.generated_metadata_path.clone() {
+            let metadata_file = fs::read_to_string(&path).unwrap();
+            let mut metadata: Value = serde_json::from_str(&metadata_file).unwrap();
 
-        if let Some(image_hash) = self.uploaded_image_tx_hash.clone() {
-            if let Some(path) = self.generated_metadata_path.clone() {
-                let metadata_file = fs::read_to_string(&path).unwrap();
-                let mut metadata: Value = serde_json::from_str(&metadata_file).unwrap();
+            self.rarity = metadata
+                .get("rarity")
+                .expect("rarity to be present")
+                .as_f64()
+                .expect("a fractional rarity number");
 
+            if let Some(image_hash) = self.uploaded_image_tx_hash.clone() {
                 if let Some(image) = metadata.get_mut("image") {
                     *image = json!(image_hash);
                 }
