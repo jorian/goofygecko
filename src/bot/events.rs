@@ -13,7 +13,7 @@ use crate::{
         database::{DatabasePool, GuildId as GId, SequenceStart},
         embeds,
     },
-    nft::VerusNFTBuilder,
+    nft::VerusNFT,
 };
 
 #[derive(Debug)]
@@ -125,13 +125,13 @@ impl EventHandler for Handler {
     }
 }
 
-async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFTBuilder, ()> {
+async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFT, ()> {
     // here is where we need to start generating an NFT.
     // TODO get config and directory locations from a separate config file.
 
     let series = String::from("geckotest");
     info!("creating {} nft #{} for {}", series, sequence, user_id);
-    let nft_builder = crate::nft::VerusNFTBuilder::generate(user_id, sequence, series).await;
+    let nft_builder = crate::nft::VerusNFT::generate(user_id, sequence, series).await;
 
     Ok(nft_builder)
 }
@@ -155,12 +155,12 @@ async fn process_new_member(new_member: Member, pool: Pool<Postgres>, ctx: Conte
 
         let sequence = sequence + sequence_start;
         match create_nft(new_member.user.id.0, sequence as u64).await {
-            Ok(nft_builder) => {
+            Ok(verus_nft) => {
                 // if the creation was ok, there should be a metadata JSON file.
                 if let Err(e) = sqlx::query!(
                     "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
                     new_member.user.id.0 as i64,
-                    nft_builder.vrsc_address.to_string()
+                    verus_nft.vrsc_address.to_string()
                 )
                 .execute(&pool)
                 .await
@@ -181,7 +181,7 @@ async fn process_new_member(new_member: Member, pool: Pool<Postgres>, ctx: Conte
 
                         channel
                             .send_message(&ctx.http, |m| {
-                                m.embed(|e| embeds::from_nftbuilder(e, nft_builder))
+                                m.embed(|e| embeds::from_verusnft(e, verus_nft))
                             })
                             .await
                             .unwrap();

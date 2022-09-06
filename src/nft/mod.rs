@@ -40,10 +40,8 @@ static CONFIG_LOCATION: &str = "assets/config.json";
 static ASSETS_LOCATION: &str = "assets/";
 static OUTPUT_LOCATION: &str = "generated/";
 
-pub struct VerusNFT {}
-
 #[derive(Debug)]
-pub struct VerusNFTBuilder {
+pub struct VerusNFT {
     // every NFT has its own user_id:
     pub user_id: u64,
     pub vrsc_address: Address,
@@ -56,7 +54,7 @@ pub struct VerusNFTBuilder {
     pub identity: Option<Identity>,
 }
 
-impl VerusNFTBuilder {
+impl VerusNFT {
     pub async fn generate(user_id: u64, sequence: u64, series: String) -> Self {
         let client = Client::chain("vrsctest", Auth::ConfigFile, None);
         let address = match client {

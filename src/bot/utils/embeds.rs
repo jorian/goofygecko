@@ -1,8 +1,8 @@
 use serenity::builder::CreateEmbed;
 
-use crate::nft::VerusNFTBuilder;
+use crate::nft::VerusNFT;
 
-pub fn from_nftbuilder(e: &mut CreateEmbed, nft_builder: VerusNFTBuilder) -> &mut CreateEmbed {
+pub fn from_verusnft(e: &mut CreateEmbed, nft_builder: VerusNFT) -> &mut CreateEmbed {
     e.title(format!("Introducing testgecko #{}", nft_builder.sequence))
         .description(format!("**Rarity:** {}\n**Price:** {} VRSC", 23, 12))
         .field(
