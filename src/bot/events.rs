@@ -4,7 +4,7 @@ use serenity::{
     prelude::{Context, EventHandler},
 };
 use sqlx::{Pool, Postgres};
-use tracing::{debug, error, info, info_span, instrument, Instrument};
+use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 use vrsc_rpc::{Auth, Client, RpcApi};
 
@@ -143,10 +143,6 @@ async fn process_new_member(new_member: Member, pool: Pool<Postgres>, ctx: Conte
         next_gecko_number.nextval.unwrap()
     );
 
-    // this process can take a while, so we spawn it in a tokio thread
-    // tokio::spawn is parallelism. It hooks into the runtime executor as a new future.
-    // tokio::spawn(
-    //     async move {
     // path is the location of the NFT image locally.
     // TODO that path should be a Arweave tx
     if let Some(sequence) = next_gecko_number.nextval {
@@ -167,27 +163,9 @@ async fn process_new_member(new_member: Member, pool: Pool<Postgres>, ctx: Conte
                 {
                     error!("Database write error: {:?}", e)
                 }
+
                 match new_member.user.create_dm_channel(&ctx).await {
                     Ok(dm) => {
-                        dm.say(&ctx, "Your NFT is ready!").await.unwrap();
-                        dm.say(
-                            &ctx,
-                            format!(
-                                "https://arweave.net/{}",
-                                &nft_builder.uploaded_image_tx_hash.as_ref().unwrap()
-                            ),
-                        )
-                        .await
-                        .unwrap();
-
-                        dm.say(&ctx, format!("See the metadata of this file: <https://v2.viewblock.io/arweave/tx/{}>", &nft_builder.uploaded_metadata_tx_hash.as_ref().unwrap()))
-                                .await
-                                .unwrap();
-
-                        dm.say(&ctx, format!("See the image transaction: <https://v2.viewblock.io/arweave/tx/{}>", &nft_builder.uploaded_image_tx_hash.as_ref().unwrap()))
-                                .await
-                                .unwrap();
-
                         let data_read = ctx.data.read().await;
                         let guild_id = data_read.get::<GId>().unwrap().clone();
 
@@ -244,7 +222,4 @@ async fn process_new_member(new_member: Member, pool: Pool<Postgres>, ctx: Conte
             }
         }
     }
-    // }
-    // .instrument(info_span!("new_nft")),
-    // );
 }
