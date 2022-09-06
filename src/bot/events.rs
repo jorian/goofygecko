@@ -9,7 +9,10 @@ use uuid::Uuid;
 use vrsc_rpc::{Auth, Client, RpcApi};
 
 use crate::{
-    bot::utils::database::{DatabasePool, GuildId as GId, SequenceStart},
+    bot::utils::{
+        database::{DatabasePool, GuildId as GId, SequenceStart},
+        embeds,
+    },
     nft::VerusNFTBuilder,
 };
 
@@ -178,36 +181,7 @@ async fn process_new_member(new_member: Member, pool: Pool<Postgres>, ctx: Conte
 
                         channel
                             .send_message(&ctx.http, |m| {
-                                m.embed(|e| {
-                                    e.title(format!(
-                                        "Introducing testgecko #{}",
-                                        nft_builder.sequence
-                                    ))
-                                    .description(format!(
-                                        "**Rarity:** {}\n**Price:** {} VRSC",
-                                        23, 12
-                                    ))
-                                    .field(
-                                        "Transaction",
-                                        format!(
-                                            "[view](https://v2.viewblock.io/arweave/tx/{})",
-                                            nft_builder.uploaded_image_tx_hash.as_ref().unwrap()
-                                        ),
-                                        true,
-                                    )
-                                    .field(
-                                        "Metadata",
-                                        format!(
-                                            "[view](https://v2.viewblock.io/arweave/tx/{})",
-                                            nft_builder.uploaded_metadata_tx_hash.as_ref().unwrap()
-                                        ),
-                                        true,
-                                    )
-                                    .image(format!(
-                                        "https://arweave.net/{}",
-                                        &nft_builder.uploaded_image_tx_hash.as_ref().unwrap()
-                                    ))
-                                })
+                                m.embed(|e| embeds::from_nftbuilder(e, nft_builder))
                             })
                             .await
                             .unwrap();
