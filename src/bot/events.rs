@@ -61,7 +61,8 @@ impl EventHandler for Handler {
                         command
                             .create_interaction_response(&ctx.http, |response| {
                                 response.interaction_response_data(|data| {
-                                    data.content(format!("#{}", identity.name))
+                                    data.content(format!("#{}", identity.name));
+                                    data.ephemeral(true)
                                 })
                             })
                             .await
