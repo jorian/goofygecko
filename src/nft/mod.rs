@@ -265,3 +265,30 @@ impl VerusNFT {
 }
 
 pub struct NFTBuilderError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn it_works() {
+        for i in 1..=9 {
+            // generate(16843548430 + i, i, Path::new("./assets/config.json")).await;
+
+            let mut verus_nft = VerusNFT {
+                user_id: 138515381 + i,
+                vrsc_address: Address::from_str("RVcxxLdedtLvysS4vXZitd3TXe6AjU5WEz").unwrap(),
+                sequence: 7000 + i,
+                edition: String::from("geckotest"),
+                rarity: 0.0,
+                generated_image_path: None,
+                generated_metadata_path: None,
+                uploaded_image_tx_hash: None,
+                uploaded_metadata_tx_hash: None,
+                identity: None,
+            };
+
+            verus_nft.generate_metadata().await;
+            verus_nft.generate_art().await;
+        }
+    }
+}
