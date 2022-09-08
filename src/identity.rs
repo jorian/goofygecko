@@ -141,7 +141,7 @@ impl IdentityBuilder {
 
             // check lengths
             for (key, value) in cm {
-                if key.len() > 20 {
+                if key.len() > 20 * 2 {
                     return Err(ErrorKind::Other(format!(
                         "key length {} too long, max 20",
                         key.len()
@@ -154,7 +154,7 @@ impl IdentityBuilder {
                 }
 
                 if let Some(value_str) = value.as_str() {
-                    if value_str.len() > 32 {
+                    if value_str.len() > 32 * 2 {
                         return Err(ErrorKind::Other(format!(
                             "value length {} too long, max 32",
                             value_str.len()

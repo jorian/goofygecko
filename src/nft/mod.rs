@@ -57,14 +57,8 @@ pub struct VerusNFT {
 
 impl VerusNFT {
     pub async fn generate(user_id: u64, sequence: u64, series: String) -> Self {
-        let client = Client::chain("vrsctest", Auth::ConfigFile, None);
-        let address = match client {
-            Ok(client) => client.get_new_address().unwrap(),
-            Err(e) => {
-                error!("an error happened while getting a new address: {:?}", e);
-                panic!("{:?}", e);
-            }
-        };
+        let client = Client::chain("vrsctest", Auth::ConfigFile, None).expect("a verus client");
+        let address = client.get_new_address().unwrap();
 
         let mut nft_builder = Self {
             user_id,
@@ -88,8 +82,6 @@ impl VerusNFT {
 
         // verus client: get new address
         // store address in database, linked to user (should i do that here??)
-        //
-
         nft_builder
     }
 
@@ -232,7 +224,12 @@ impl VerusNFT {
         // - created on either testnet or mainnet (VRSC vs vrsctest)
         // that is enough information to find out where the metadata is, as the metadata file has a tag with
         // the vdxfkey of `<sequence>.<edition>.geckotest.vrsctest::nft.json` and can thus be queried on Arweave.
-        //
+        let vdxfkey_hex = "9a55eaaad7bacc9f37a449e315ff32fedc07b126"; //geckotest.vrsctest::nft.json
+        let base64_decoded = base64_url::decode(self.uploaded_metadata_tx_hash.as_ref().unwrap());
+        let vdxfvalue_hex = hex::encode(base64_decoded.unwrap());
+
+        debug!("vdxfvalue_hex {:?}", vdxfvalue_hex);
+
         let mut identity_builder = Identity::builder();
 
         // if config is testnet {
@@ -242,6 +239,7 @@ impl VerusNFT {
             .name(&format!("{}", self.sequence))
             .on_currency_name(&self.edition)
             .add_address(&self.vrsc_address)
+            .with_content_map(json!({ vdxfkey_hex: &vdxfvalue_hex }))
             .validate()
         {
             error!("something went wrong while creating the identity: {:?}", e);
@@ -270,12 +268,11 @@ pub struct NFTBuilderError {}
 mod tests {
     use super::*;
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn it_works() {
+    async fn test_image_generation() {
+        let user_id = 138515381;
         for i in 1..=9 {
-            // generate(16843548430 + i, i, Path::new("./assets/config.json")).await;
-
             let mut verus_nft = VerusNFT {
-                user_id: 138515381 + i,
+                user_id: user_id + i,
                 vrsc_address: Address::from_str("RVcxxLdedtLvysS4vXZitd3TXe6AjU5WEz").unwrap(),
                 sequence: 7000 + i,
                 edition: String::from("geckotest"),
@@ -289,6 +286,25 @@ mod tests {
 
             verus_nft.generate_metadata().await;
             verus_nft.generate_art().await;
+
+            assert!(Path::new(OUTPUT_LOCATION)
+                .join(format!("{}.png", user_id + i))
+                .exists());
+
+            assert!(Path::new(OUTPUT_LOCATION)
+                .join(format!("{}.json", user_id + i))
+                .exists());
         }
+    }
+
+    #[tokio::test]
+    async fn test_vdxf_id() {
+        let client = Client::chain("vrsctest", Auth::ConfigFile, None).expect("a verus client");
+
+        let vdxfid = client
+            .get_vdxf_id("geckotest.vrsctest::nft.json", None)
+            .expect("a vdxfid object");
+
+        dbg!(vdxfid);
     }
 }

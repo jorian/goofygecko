@@ -220,6 +220,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "base64-url"
+version = "1.4.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67a99c239d0c7e77c85dddfa9cebce48704b3c49550fcd3b84dd637e4484899f"
+dependencies = [
+ "base64 0.13.0",
+]
+
+[[package]]
 name = "bech32"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3351,6 +3360,7 @@ name = "verusnft"
 version = "0.1.0"
 dependencies = [
  "arloader",
+ "base64-url",
  "color-eyre",
  "config",
  "derive_more",

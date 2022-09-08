@@ -15,6 +15,7 @@ path = "src/lib.rs"
 
 [dependencies]
 arloader = "0.1.63"
+base64-url = "1.4"
 color-eyre = "0.6"
 config = {version = "0.13", default-features = false, features = ["toml"]}
 derive_more = "0.99.17"
