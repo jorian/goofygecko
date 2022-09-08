@@ -91,3 +91,44 @@ impl ArweaveTransaction {
         Err(())
     }
 }
+
+pub async fn get_transaction_by_identity(gecko_number: &str) -> String {
+    let identity = format!("{}.geckotest@", gecko_number);
+
+    let query = format!(
+        r#"
+    query {{
+      transactions(
+        tags: {{
+          name: "identity",
+          values: ["{}"]
+        }}
+      ) {{
+        edges {{
+          node {{
+            id
+          }}
+        }}
+      }}
+    }}"#,
+        identity
+    );
+
+    println!("{}", &query);
+
+    let client = gql_client::Client::new("https://arweave.net/graphql");
+    let data = client
+        .query_unwrap::<serde_json::Value>(&query)
+        .await
+        .unwrap();
+
+    let txid = &data["transactions"]["edges"]
+        .as_array()
+        .unwrap()
+        .first()
+        .unwrap()["node"]["id"];
+
+    println!("{}", txid);
+
+    txid.to_string()
+}

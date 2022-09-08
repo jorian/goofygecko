@@ -1116,6 +1116,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
+name = "gql_client"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2ad0b978ded703acd23762f99e0f701450c9d0066912c0d7f9bf65bf017d87d"
+dependencies = [
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3365,6 +3377,7 @@ dependencies = [
  "config",
  "derive_more",
  "futures",
+ "gql_client",
  "hex",
  "indexmap",
  "rand 0.8.5",

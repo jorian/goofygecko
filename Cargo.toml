@@ -19,6 +19,7 @@ base64-url = "1.4"
 color-eyre = "0.6"
 config = {version = "0.13", default-features = false, features = ["toml"]}
 derive_more = "0.99.17"
+gql_client = "1.0"
 hex = "0.4"
 indexmap = {version = "1.8.0", features = ["serde"]}
 rand = "0.8"
