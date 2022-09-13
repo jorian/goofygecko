@@ -1,3 +1,8 @@
+use reqwest::{
+    header::{HeaderMap, HeaderValue, CACHE_CONTROL},
+    Method,
+};
+use serde_json::json;
 /// Handles connection and communication to and from Arweave
 use std::path::{Path, PathBuf};
 use tracing::debug;
@@ -137,14 +142,27 @@ pub async fn get_transaction_by_identity(gecko_number: &str) -> String {
 
 pub async fn get_metadata_json<'a>(tx_id: &'a str) -> NFTMetadata {
     let client = reqwest::Client::new();
-    let res = reqwest::get(format!("https://arweave.net/tx/{}/data", tx_id)).await;
+    let mut headers = HeaderMap::new();
+    headers.insert(CACHE_CONTROL, HeaderValue::from_str("no-cache").unwrap());
+    let res = client
+        .request(
+            Method::GET,
+            format!("https://arweave.net/tx/{}/data", tx_id),
+        )
+        .headers(headers)
+        .send()
+        .await;
+    // let res = reqwest::get(format!("https://arweave.net/tx/{}/data", tx_id)).await;
+
     debug!("res: {:?}", res);
 
     let base64_data = res.expect("a request").text().await.expect("base64_data");
+    debug!("{:?}", base64_data);
     let json_text = base64_url::decode(&base64_data).expect("decoded base64 data");
 
+    debug!("text: {:?}", json_text);
+
     let metadata: NFTMetadata = serde_json::from_slice(&json_text).expect("NFTMetadata object");
-    // debug!("text: {:?}", metadata);
     //json().await.expect("a json");
 
     metadata

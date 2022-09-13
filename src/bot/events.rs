@@ -1,6 +1,14 @@
 use serenity::{
     async_trait,
-    model::{application::interaction::Interaction, guild::Member, id::GuildId, prelude::Ready},
+    model::{
+        application::interaction::Interaction,
+        guild::Member,
+        id::GuildId,
+        prelude::{
+            command::CommandOptionType, interaction::application_command::CommandDataOptionValue,
+            Ready,
+        },
+    },
     prelude::{Context, EventHandler},
 };
 use sqlx::{Pool, Postgres};
@@ -13,6 +21,7 @@ use crate::{
         database::{DatabasePool, GuildId as GId, SequenceStart},
         embeds,
     },
+    identity,
     nft::VerusNFT,
 };
 
@@ -29,6 +38,82 @@ impl EventHandler for Handler {
             info!("received command interaction: {:?}", command);
 
             match command.data.name.as_str() {
+                "gecko" => {
+                    let option = command
+                        .data
+                        .options
+                        .get(0)
+                        .expect("user option")
+                        .resolved
+                        .as_ref()
+                        .expect("an integer indicating a gecko");
+
+                    if let CommandDataOptionValue::Number(n) = option {
+                        // get identity
+                        let client = Client::chain("vrsctest", Auth::ConfigFile, None)
+                            .expect("A verus daemon client");
+                        let identity_res =
+                            client.get_identity(&format!("{}.geckotest@", *n as u64));
+
+                        if let Ok(identity) = identity_res {
+                            let cm = identity.identity.contentmap;
+                            let hex_tx = cm
+                                .get("9a55eaaad7bacc9f37a449e315ff32fedc07b126")
+                                .expect("a vdxf key that indicates the location of the metadata");
+
+                            let hex_decoded = hex::decode(hex_tx).expect("hex decode");
+
+                            debug!("retrieved from contentmap: {:?}", hex_decoded);
+                            let encoded_tx_hash_str = base64_url::encode(&hex_decoded);
+                            // base64_url::encode(base64_tx).expect("a base64 url");
+                            debug!("encoded_tx_hash: {:?}", &encoded_tx_hash_str);
+                            // let decoded_tx_hash_str = std::str::from_utf8(decoded_tx_hash_vec.as_ref())
+                            //     .expect("a valid utf8 string");
+
+                            let metadata =
+                                crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await;
+
+                            command
+                                .create_interaction_response(&ctx.http, |response| {
+                                    response.interaction_response_data(|data| {
+                                        data.embed(|e| {
+                                            e.title(format!("Introducing {}", metadata.name))
+                                                .description(format!(
+                                                    "**Rarity:** {}\n",
+                                                    metadata.rarity
+                                                ))
+                                                .field(
+                                                    "Transaction",
+                                                    format!(
+                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
+                                                    metadata.image
+                                                ),
+                                                    true,
+                                                )
+                                                .field(
+                                                    "Metadata",
+                                                    format!(
+                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
+                                                    encoded_tx_hash_str
+                                                ),
+                                                    true,
+                                                )
+                                                .image(format!(
+                                                    "https://arweave.net/{}",
+                                                    &metadata.image
+                                                ))
+                                        });
+                                        // data.content(format!("https://arweave.net/{}", metadata.image));
+                                        data.ephemeral(true)
+                                    })
+                                })
+                                .await
+                                .expect("a response to a /list interaction");
+                        }
+                    } else {
+                        error!("no number was entered")
+                    }
+                }
                 "list" => {
                     let data_read = ctx.data.read().await;
                     let pg_pool = data_read.get::<DatabasePool>().clone().unwrap();
@@ -129,9 +214,18 @@ impl EventHandler for Handler {
 
         let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
             commands
-                .create_application_command(|cmd| cmd.name("list").description("List all my NFTs"));
-
-            commands
+                .create_application_command(|cmd| cmd.name("list").description("List all my NFTs"))
+                .create_application_command(|cmd| {
+                    cmd.name("gecko")
+                        .description("List all my NFTs")
+                        .create_option(|option| {
+                            option
+                                .name("ID")
+                                .description("The Gecko number to look up")
+                                .kind(CommandOptionType::Integer)
+                                .required(true)
+                        })
+                })
         })
         .await;
     }
