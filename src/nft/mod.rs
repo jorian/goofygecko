@@ -25,7 +25,7 @@ use vrsc_rpc::{json::vrsc::Address, Auth, Client, RpcApi};
 use super::identity::Identity;
 
 pub(crate) mod art;
-mod arweave;
+pub(crate) mod arweave;
 mod config;
 pub(crate) mod metadata;
 

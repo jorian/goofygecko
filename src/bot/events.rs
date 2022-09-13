@@ -61,10 +61,27 @@ impl EventHandler for Handler {
                     debug!("{:?}", identities_with_address);
 
                     for identity in identities_with_address {
+                        let cm = identity.contentmap;
+                        let hex_tx = cm
+                            .get("9a55eaaad7bacc9f37a449e315ff32fedc07b126")
+                            .expect("a vdxf key that indicates the location of the metadata");
+
+                        let hex_decoded = hex::decode(hex_tx).expect("hex decode");
+
+                        debug!("retrieved from contentmap: {:?}", hex_decoded);
+                        let encoded_tx_hash_str = base64_url::encode(&hex_decoded);
+                        // base64_url::encode(base64_tx).expect("a base64 url");
+                        debug!("encoded_tx_hash: {:?}", &encoded_tx_hash_str);
+                        // let decoded_tx_hash_str = std::str::from_utf8(decoded_tx_hash_vec.as_ref())
+                        //     .expect("a valid utf8 string");
+
+                        let metadata =
+                            crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await;
+
                         command
                             .create_interaction_response(&ctx.http, |response| {
                                 response.interaction_response_data(|data| {
-                                    data.content(format!("#{}", identity.name));
+                                    data.content(format!("https://arweave.net/{}", metadata.image));
                                     data.ephemeral(true)
                                 })
                             })

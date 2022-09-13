@@ -3382,6 +3382,7 @@ dependencies = [
  "indexmap",
  "rand 0.8.5",
  "rand_pcg",
+ "reqwest",
  "secrecy",
  "serde",
  "serde-aux",

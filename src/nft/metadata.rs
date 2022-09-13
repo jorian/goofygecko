@@ -129,14 +129,14 @@ fn create_metadata(
     config: &config::Config,
     output_directory: &Path,
 ) {
-    let image_name = &format!("{}.png", user_id);
+    let image_name = format!("{}.png", user_id);
     // let mut rarity = attributes.product
     let generated_metadata = NFTMetadata {
-        name: &format!("{} #{}", &config.name, sequence),
-        identity: &format!("{}.{}", sequence, &config.identity),
-        description: &config.description,
+        name: format!("{} #{}", &config.name, sequence),
+        identity: format!("{}.{}", sequence, &config.identity),
+        description: config.description.clone(),
         rarity: attributes.iter().fold(1.0, |acc, x| acc * x.rarity),
-        image: image_name,
+        image: image_name.clone(),
         edition: 0,
         attributes, //: attributes
         // .drain(..)
@@ -144,10 +144,10 @@ fn create_metadata(
         // .collect(),
         properties: Properties {
             files: vec![PropertyFile {
-                uri: image_name,
-                r#type: "image/png",
+                uri: image_name.clone(),
+                r#type: String::from("image/png"),
             }],
-            category: "image",
+            category: String::from("image"),
         },
     };
 
@@ -172,15 +172,15 @@ fn write_metadata(id: u64, data: &str, output_directory: &Path) {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct NFTMetadata<'a> {
-    name: &'a str,
-    identity: &'a str,
-    description: &'a str,
+pub struct NFTMetadata {
+    name: String,
+    identity: String,
+    description: String,
     rarity: f32,
-    image: &'a str,
+    pub image: String,
     edition: u16,
     pub attributes: Vec<Trait>,
-    properties: Properties<'a>,
+    properties: Properties,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -191,15 +191,15 @@ pub struct Trait {
 }
 
 #[derive(Serialize, Deserialize)]
-struct Properties<'a> {
-    files: Vec<PropertyFile<'a>>,
-    category: &'a str,
+struct Properties {
+    files: Vec<PropertyFile>,
+    category: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct PropertyFile<'a> {
-    uri: &'a str,
-    r#type: &'a str,
+struct PropertyFile {
+    uri: String,
+    r#type: String,
 }
 
 #[cfg(test)]

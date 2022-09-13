@@ -8,6 +8,8 @@ use arloader::{
     Arweave,
 };
 
+use super::metadata::NFTMetadata;
+
 // first we need to create and sign the transaction for the image.
 // that results in a id which we subsequently use in the metadata file.
 
@@ -131,4 +133,19 @@ pub async fn get_transaction_by_identity(gecko_number: &str) -> String {
     println!("{}", txid);
 
     txid.to_string()
+}
+
+pub async fn get_metadata_json<'a>(tx_id: &'a str) -> NFTMetadata {
+    let client = reqwest::Client::new();
+    let res = reqwest::get(format!("https://arweave.net/tx/{}/data", tx_id)).await;
+    debug!("res: {:?}", res);
+
+    let base64_data = res.expect("a request").text().await.expect("base64_data");
+    let json_text = base64_url::decode(&base64_data).expect("decoded base64 data");
+
+    let metadata: NFTMetadata = serde_json::from_slice(&json_text).expect("NFTMetadata object");
+    // debug!("text: {:?}", metadata);
+    //json().await.expect("a json");
+
+    metadata
 }
