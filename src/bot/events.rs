@@ -81,7 +81,34 @@ impl EventHandler for Handler {
                         command
                             .create_interaction_response(&ctx.http, |response| {
                                 response.interaction_response_data(|data| {
-                                    data.content(format!("https://arweave.net/{}", metadata.image));
+                                    data.embed(|e| {
+                                        e.title(format!("Introducing {}", metadata.name))
+                                            .description(format!(
+                                                "**Rarity:** {}\n",
+                                                metadata.rarity
+                                            ))
+                                            .field(
+                                                "Transaction",
+                                                format!(
+                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
+                                                    metadata.image
+                                                ),
+                                                true,
+                                            )
+                                            .field(
+                                                "Metadata",
+                                                format!(
+                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
+                                                    encoded_tx_hash_str
+                                                ),
+                                                true,
+                                            )
+                                            .image(format!(
+                                                "https://arweave.net/{}",
+                                                &metadata.image
+                                            ))
+                                    });
+                                    // data.content(format!("https://arweave.net/{}", metadata.image));
                                     data.ephemeral(true)
                                 })
                             })

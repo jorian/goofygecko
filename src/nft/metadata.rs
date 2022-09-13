@@ -173,12 +173,12 @@ fn write_metadata(id: u64, data: &str, output_directory: &Path) {
 
 #[derive(Serialize, Deserialize)]
 pub struct NFTMetadata {
-    name: String,
-    identity: String,
-    description: String,
-    rarity: f32,
+    pub name: String,
+    pub identity: String,
+    pub description: String,
+    pub rarity: f32,
     pub image: String,
-    edition: u16,
+    pub edition: u16,
     pub attributes: Vec<Trait>,
     properties: Properties,
 }
