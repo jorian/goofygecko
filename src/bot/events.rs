@@ -105,7 +105,7 @@ impl EventHandler for Handler {
                                                 ))
                                         });
                                         // data.content(format!("https://arweave.net/{}", metadata.image));
-                                        data.ephemeral(true)
+                                        data.ephemeral(false)
                                     })
                                 })
                                 .await
