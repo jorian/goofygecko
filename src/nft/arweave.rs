@@ -1,19 +1,16 @@
-use reqwest::{
-    header::{HeaderMap, HeaderValue, CACHE_CONTROL},
-    Method,
-};
-use serde_json::json;
-/// Handles connection and communication to and from Arweave
-use std::path::{Path, PathBuf};
-use tracing::debug;
-use url::Url;
-
+use super::metadata::NFTMetadata;
 use arloader::{
     transaction::{Base64, FromUtf8Strs, Tag},
     Arweave,
 };
-
-use super::metadata::NFTMetadata;
+use reqwest::{
+    header::{HeaderMap, HeaderValue, CACHE_CONTROL},
+    Method,
+};
+/// Handles connection and communication to and from Arweave
+use std::path::{Path, PathBuf};
+use tracing::debug;
+use url::Url;
 
 // first we need to create and sign the transaction for the image.
 // that results in a id which we subsequently use in the metadata file.

@@ -1,3 +1,10 @@
+use crate::{
+    bot::utils::{
+        database::{DatabasePool, GuildId as GId, SequenceStart},
+        embeds,
+    },
+    nft::VerusNFT,
+};
 use serenity::{
     async_trait,
     model::{
@@ -15,15 +22,6 @@ use sqlx::{Pool, Postgres};
 use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 use vrsc_rpc::{Auth, Client, RpcApi};
-
-use crate::{
-    bot::utils::{
-        database::{DatabasePool, GuildId as GId, SequenceStart},
-        embeds,
-    },
-    identity,
-    nft::VerusNFT,
-};
 
 #[derive(Debug)]
 pub struct Handler {}
@@ -48,12 +46,15 @@ impl EventHandler for Handler {
                         .as_ref()
                         .expect("an integer indicating a gecko");
 
-                    if let CommandDataOptionValue::Number(n) = option {
+                    if let CommandDataOptionValue::Integer(n) = option {
+                        debug!("got number {} to look up", n);
                         // get identity
                         let client = Client::chain("vrsctest", Auth::ConfigFile, None)
                             .expect("A verus daemon client");
                         let identity_res =
                             client.get_identity(&format!("{}.geckotest@", *n as u64));
+
+                        debug!("{:?}", identity_res);
 
                         if let Ok(identity) = identity_res {
                             let cm = identity.identity.contentmap;
@@ -108,7 +109,7 @@ impl EventHandler for Handler {
                                     })
                                 })
                                 .await
-                                .expect("a response to a /list interaction");
+                                .expect("a response to a /gecko interaction");
                         }
                     } else {
                         error!("no number was entered")
@@ -217,17 +218,24 @@ impl EventHandler for Handler {
                 .create_application_command(|cmd| cmd.name("list").description("List all my NFTs"))
                 .create_application_command(|cmd| {
                     cmd.name("gecko")
-                        .description("List all my NFTs")
+                        .description("testest")
                         .create_option(|option| {
                             option
-                                .name("ID")
-                                .description("The Gecko number to look up")
+                                .name("number")
+                                .description("The Goofy Gecko to look up")
                                 .kind(CommandOptionType::Integer)
                                 .required(true)
                         })
                 })
-        })
-        .await;
+        });
+
+        let result = commands.await;
+        debug!("Registered commands: {:?}", result);
+        if let Err(error) = result {
+            panic!("Commands were not registered successfully:\n{:#?}", error);
+        }
+
+        info!("Bot is ready!");
     }
 
     #[instrument(skip(ctx), fields(
