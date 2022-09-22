@@ -1,36 +1,25 @@
 extern crate verusnftlib;
 
-use std::{path::Path, sync::Arc};
-
 use color_eyre::Report;
 use secrecy::ExposeSecret;
-use tracing::{debug, error, instrument};
-use tracing_subscriber::filter::EnvFilter;
-
 use serenity::{
     client::{Client, Context},
-    framework::standard::{
-        macros::{group, hook},
-        DispatchError, StandardFramework,
-    },
+    framework::standard::{macros::hook, DispatchError, StandardFramework},
     model::{channel::Message, gateway::GatewayIntents},
 };
-
-use verusnftlib::bot::{
-    events,
-    utils::database::{DatabasePool, SequenceStart},
-    utils::{self, database::GuildId},
+use std::{path::Path, sync::Arc};
+use tracing::{debug, error, instrument};
+use tracing_subscriber::filter::EnvFilter;
+use verusnftlib::{
+    bot::{events, framework::*, global_data::*, utils::database::*},
+    configuration::*,
 };
 use vrsc_rpc::{Auth, RpcApi};
-
-#[group]
-struct General;
 
 #[tokio::main(worker_threads = 8)]
 #[instrument]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let config =
-        verusnftlib::configuration::get_configuration().expect("failed to read configuration");
+    let config = get_configuration().expect("failed to read configuration");
 
     setup_logging().await?;
 
@@ -68,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // in a block to close the write borrow
         let mut data = client.data.write().await;
 
-        let pg_pool = utils::database::obtain_postgres_pool(&config.database).await?;
+        let pg_pool = obtain_postgres_pool(&config.database).await?;
         sqlx::migrate!("./migrations").run(&pg_pool).await?;
         data.insert::<DatabasePool>(pg_pool);
 

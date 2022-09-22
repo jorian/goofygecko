@@ -2,13 +2,13 @@ use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use serde_aux::field_attributes::deserialize_number_from_string;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct DatabaseSettings {
     pub username: String,
     pub password: Secret<String>,
@@ -40,7 +40,7 @@ impl DatabaseSettings {
         )
     }
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ApplicationSettings {
     pub assets_dir: String,
     pub output_dir: String,
@@ -50,6 +50,7 @@ pub struct ApplicationSettings {
     pub discord_guild_id: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub sequence_start: u64,
+    pub series: String,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {

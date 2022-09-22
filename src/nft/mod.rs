@@ -22,6 +22,8 @@ use serde_json::{json, Value};
 use tracing::{debug, error, info};
 use vrsc_rpc::{json::vrsc::Address, Auth, Client, RpcApi};
 
+use crate::configuration::Settings;
+
 use super::identity::Identity;
 
 pub(crate) mod art;
@@ -36,9 +38,9 @@ pub(crate) mod metadata;
 /// - identity details
 ///
 
-static CONFIG_LOCATION: &str = "assets/config.json";
-static ASSETS_LOCATION: &str = "assets/";
-static OUTPUT_LOCATION: &str = "generated/";
+// static CONFIG_LOCATION: &str = "assets/config.json";
+// static ASSETS_LOCATION: &str = "assets/";
+// static OUTPUT_LOCATION: &str = "generated/";
 
 #[derive(Debug)]
 pub struct VerusNFT {
@@ -56,15 +58,15 @@ pub struct VerusNFT {
 }
 
 impl VerusNFT {
-    pub async fn generate(user_id: u64, sequence: u64, series: String) -> Self {
+    pub async fn generate(user_id: u64, app_config: &Settings) -> Self {
         let client = Client::chain("vrsctest", Auth::ConfigFile, None).expect("a verus client");
         let address = client.get_new_address().unwrap();
 
         let mut nft_builder = Self {
             user_id,
             vrsc_address: address,
-            sequence,
-            edition: series,
+            sequence: app_config.application.sequence_start,
+            edition: app_config.application.series.clone(),
             rarity: 0.0,
             generated_metadata_path: None,
             generated_image_path: None,
@@ -73,8 +75,16 @@ impl VerusNFT {
             identity: None,
         };
 
-        nft_builder.generate_metadata().await;
-        nft_builder.generate_art().await;
+        let config_location = format!("{}/config.json", &app_config.application.assets_dir);
+        nft_builder
+            .generate_metadata(&config_location, &app_config.application.output_dir)
+            .await;
+        nft_builder
+            .generate_art(
+                &app_config.application.assets_dir,
+                &app_config.application.output_dir,
+            )
+            .await;
         nft_builder.arweave_image_upload().await;
         nft_builder.update_metadata().await;
         nft_builder.arweave_metadata_upload().await;
@@ -86,22 +96,22 @@ impl VerusNFT {
     }
 
     /// Generates the metadata for the user that just entered and stores it locally.
-    async fn generate_metadata(&mut self) {
-        metadata::generate(self.user_id, self.sequence, CONFIG_LOCATION.as_ref()).await;
+    async fn generate_metadata(&mut self, config_location: &str, output_location: &str) {
+        metadata::generate(self.user_id, self.sequence, Path::new(config_location)).await;
 
         // TODO this is really ugly, need one source of truth
         // ideally metadata::generate returns the location of the generated metadata, which I can update here:
-        let path = PathBuf::from_str(&format!("{}{}.json", OUTPUT_LOCATION, self.user_id))
+        let path = PathBuf::from_str(&format!("{}{}.json", output_location, self.user_id))
             .expect("parsing metadata path failed");
 
         self.generated_metadata_path = Some(path);
     }
 
-    async fn generate_art(&mut self) {
+    async fn generate_art(&mut self, assets_location: &str, output_location: &str) {
         match art::generate(
             self.user_id,
-            ASSETS_LOCATION.as_ref(),
-            OUTPUT_LOCATION.as_ref(),
+            Path::new(assets_location),
+            Path::new(output_location),
         )
         .await
         {
@@ -224,7 +234,7 @@ impl VerusNFT {
         // - created on either testnet or mainnet (VRSC vs vrsctest)
         // that is enough information to find out where the metadata is, as the metadata file has a tag with
         // the vdxfkey of `<sequence>.<edition>.geckotest.vrsctest::nft.json` and can thus be queried on Arweave.
-        let vdxfkey_hex = "9a55eaaad7bacc9f37a449e315ff32fedc07b126"; //geckotest.vrsctest::nft.json
+        let vdxfkey_hex = "9a55eaaad7bacc9f37a449e315ff32fedc07b126"; //geckotest.vrsctest::nft.json TODO get from vdxfkey call
         let base64_decoded = base64_url::decode(self.uploaded_metadata_tx_hash.as_ref().unwrap());
         let vdxfvalue_hex = hex::encode(base64_decoded.unwrap());
 
@@ -262,49 +272,47 @@ impl VerusNFT {
     }
 }
 
-pub struct NFTBuilderError {}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn test_image_generation() {
-        let user_id = 138515381;
-        for i in 1..=9 {
-            let mut verus_nft = VerusNFT {
-                user_id: user_id + i,
-                vrsc_address: Address::from_str("RVcxxLdedtLvysS4vXZitd3TXe6AjU5WEz").unwrap(),
-                sequence: 7000 + i,
-                edition: String::from("geckotest"),
-                rarity: 0.0,
-                generated_image_path: None,
-                generated_metadata_path: None,
-                uploaded_image_tx_hash: None,
-                uploaded_metadata_tx_hash: None,
-                identity: None,
-            };
+    // use super::*;
+    // #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    // async fn test_image_generation() {
+    //     let user_id = 138515381;
+    //     for i in 1..=9 {
+    //         let mut verus_nft = VerusNFT {
+    //             user_id: user_id + i,
+    //             vrsc_address: Address::from_str("RVcxxLdedtLvysS4vXZitd3TXe6AjU5WEz").unwrap(),
+    //             sequence: 7000 + i,
+    //             edition: String::from("geckotest"),
+    //             rarity: 0.0,
+    //             generated_image_path: None,
+    //             generated_metadata_path: None,
+    //             uploaded_image_tx_hash: None,
+    //             uploaded_metadata_tx_hash: None,
+    //             identity: None,
+    //         };
 
-            verus_nft.generate_metadata().await;
-            verus_nft.generate_art().await;
+    //         verus_nft.generate_metadata().await;
+    //         verus_nft.generate_art().await;
 
-            assert!(Path::new(OUTPUT_LOCATION)
-                .join(format!("{}.png", user_id + i))
-                .exists());
+    //         assert!(Path::new(OUTPUT_LOCATION)
+    //             .join(format!("{}.png", user_id + i))
+    //             .exists());
 
-            assert!(Path::new(OUTPUT_LOCATION)
-                .join(format!("{}.json", user_id + i))
-                .exists());
-        }
-    }
+    //         assert!(Path::new(OUTPUT_LOCATION)
+    //             .join(format!("{}.json", user_id + i))
+    //             .exists());
+    //     }
+    // }
 
-    #[tokio::test]
-    async fn test_vdxf_id() {
-        let client = Client::chain("vrsctest", Auth::ConfigFile, None).expect("a verus client");
+    // #[tokio::test]
+    // async fn test_vdxf_id() {
+    //     let client = Client::chain("vrsctest", Auth::ConfigFile, None).expect("a verus client");
 
-        let vdxfid = client
-            .get_vdxf_id("geckotest.vrsctest::nft.json", None)
-            .expect("a vdxfid object");
+    //     let vdxfid = client
+    //         .get_vdxf_id("geckotest.vrsctest::nft.json", None)
+    //         .expect("a vdxfid object");
 
-        dbg!(vdxfid);
-    }
+    //     dbg!(vdxfid);
+    // }
 }

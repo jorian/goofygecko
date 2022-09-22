@@ -1,8 +1,9 @@
 use crate::{
-    bot::utils::{
-        database::{DatabasePool, GuildId as GId, SequenceStart},
-        embeds,
+    bot::{
+        global_data::{AppConfig, DatabasePool, GuildId as GId},
+        utils::embeds,
     },
+    configuration::Settings,
     nft::VerusNFT,
 };
 use serenity::{
@@ -48,7 +49,7 @@ impl EventHandler for Handler {
 
                     if let CommandDataOptionValue::Integer(n) = option {
                         debug!("got number {} to look up", n);
-                        // get identity
+
                         let client = Client::chain("vrsctest", Auth::ConfigFile, None)
                             .expect("A verus daemon client");
                         let identity_res =
@@ -65,11 +66,10 @@ impl EventHandler for Handler {
                             let hex_decoded = hex::decode(hex_tx).expect("hex decode");
 
                             debug!("retrieved from contentmap: {:?}", hex_decoded);
+
                             let encoded_tx_hash_str = base64_url::encode(&hex_decoded);
-                            // base64_url::encode(base64_tx).expect("a base64 url");
+
                             debug!("encoded_tx_hash: {:?}", &encoded_tx_hash_str);
-                            // let decoded_tx_hash_str = std::str::from_utf8(decoded_tx_hash_vec.as_ref())
-                            //     .expect("a valid utf8 string");
 
                             let metadata =
                                 crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await;
@@ -126,7 +126,6 @@ impl EventHandler for Handler {
                                                     &metadata.image
                                                 ))
                                         });
-                                        // data.content(format!("https://arweave.net/{}", metadata.image));
                                         data.ephemeral(false)
                                     })
                                 })
@@ -134,7 +133,7 @@ impl EventHandler for Handler {
                                 .expect("a response to a /gecko interaction");
                         }
                     } else {
-                        error!("no number was entered")
+                        error!("no integer was entered")
                     }
                 }
                 "list" => {
@@ -159,7 +158,6 @@ impl EventHandler for Handler {
                         .vrsc_address
                         .expect("an address for this user");
 
-                    // we now have the connection between the discord user and the primary address for this user. Let's use the new RPC to find out which identities are controlled with this primary address:
                     let client = Client::chain("vrsctest", Auth::ConfigFile, None)
                         .expect("A verus daemon client");
                     let identities_with_address = client
@@ -178,10 +176,8 @@ impl EventHandler for Handler {
 
                         debug!("retrieved from contentmap: {:?}", hex_decoded);
                         let encoded_tx_hash_str = base64_url::encode(&hex_decoded);
-                        // base64_url::encode(base64_tx).expect("a base64 url");
+
                         debug!("encoded_tx_hash: {:?}", &encoded_tx_hash_str);
-                        // let decoded_tx_hash_str = std::str::from_utf8(decoded_tx_hash_vec.as_ref())
-                        //     .expect("a valid utf8 string");
 
                         let metadata =
                             crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await;
@@ -216,7 +212,6 @@ impl EventHandler for Handler {
                                                 &metadata.image
                                             ))
                                     });
-                                    // data.content(format!("https://arweave.net/{}", metadata.image));
                                     data.ephemeral(true)
                                 })
                             })
@@ -237,10 +232,12 @@ impl EventHandler for Handler {
 
         let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
             commands
-                .create_application_command(|cmd| cmd.name("list").description("List all my NFTs"))
+                .create_application_command(|cmd| {
+                    cmd.name("list").description("List all my Goofy Geckos")
+                })
                 .create_application_command(|cmd| {
                     cmd.name("gecko")
-                        .description("testest")
+                        .description("Get information about a specific Goofy Gecko")
                         .create_option(|option| {
                             option
                                 .name("number")
@@ -275,6 +272,11 @@ impl EventHandler for Handler {
             data_read.get::<DatabasePool>().unwrap().clone()
         };
 
+        let app_config = {
+            let data_read = &ctx.data.read().await;
+            data_read.get::<AppConfig>().unwrap().clone()
+        };
+
         let data = sqlx::query!(
             "SELECT discord_user_id FROM user_register WHERE discord_user_id = $1",
             user_id as i64
@@ -288,23 +290,17 @@ impl EventHandler for Handler {
         } else {
             info!("this is a first-time new member");
 
-            process_new_member(new_member, pool, ctx).await;
+            process_new_member(new_member, pool, app_config, ctx).await;
         }
     }
 }
 
-async fn create_nft(user_id: u64, sequence: u64) -> Result<VerusNFT, ()> {
-    // here is where we need to start generating an NFT.
-    // TODO get config and directory locations from a separate config file.
-
-    let series = String::from("geckotest");
-    info!("creating {} nft #{} for {}", series, sequence, user_id);
-    let nft_builder = crate::nft::VerusNFT::generate(user_id, sequence, series).await;
-
-    Ok(nft_builder)
-}
-
-async fn process_new_member(new_member: Member, pool: Pool<Postgres>, ctx: Context) {
+async fn process_new_member(
+    new_member: Member,
+    pool: Pool<Postgres>,
+    app_config: Settings,
+    ctx: Context,
+) {
     let next_gecko_number = sqlx::query!("SELECT nextval('goofygeckoserial')")
         .fetch_one(&pool)
         .await
@@ -318,11 +314,8 @@ async fn process_new_member(new_member: Member, pool: Pool<Postgres>, ctx: Conte
     // path is the location of the NFT image locally.
     // TODO that path should be a Arweave tx
     if let Some(sequence) = next_gecko_number.nextval {
-        let data_read = ctx.data.read().await;
-        let sequence_start = data_read.get::<SequenceStart>().unwrap().clone();
-
-        let sequence = sequence + sequence_start;
-        match create_nft(new_member.user.id.0, sequence as u64).await {
+        let sequence = sequence + app_config.application.sequence_start as i64;
+        match create_nft(new_member.user.id.0, sequence, &app_config).await {
             Ok(verus_nft) => {
                 // if the creation was ok, there should be a metadata JSON file.
                 if let Err(e) = sqlx::query!(
@@ -361,8 +354,17 @@ async fn process_new_member(new_member: Member, pool: Pool<Postgres>, ctx: Conte
             }
             Err(e) => {
                 error!("Something went wrong while creating the NFT: {:?}", e)
-                // TODO something that notifies me
             }
         }
     }
+}
+
+async fn create_nft(user_id: u64, sequence: i64, app_config: &Settings) -> Result<VerusNFT, ()> {
+    info!(
+        "creating {} nft #{} for {}",
+        app_config.application.series, sequence, user_id
+    );
+    let nft_builder = crate::nft::VerusNFT::generate(user_id, app_config).await;
+
+    Ok(nft_builder)
 }

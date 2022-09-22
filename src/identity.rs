@@ -8,13 +8,16 @@ use vrsc_rpc::{
     Client, RpcApi,
 };
 
+/// This identity struct is the result of going through the process of
+/// 1. registering a name commitment
+/// 2. waiting for the registration to be mined
+/// 3. registering the actual identity
 #[derive(Debug)]
 pub struct Identity {
     pub name_commitment: NameCommitment,
     pub registration_txid: Txid,
 }
-
-impl<'a> Identity {
+impl Identity {
     pub fn builder() -> IdentityBuilder {
         IdentityBuilder {
             testnet: false,
@@ -186,11 +189,11 @@ impl IdentityBuilder {
         let name_commitment = self.register_name_commitment().await?;
         debug!("{:?}", &name_commitment);
 
-        let identity_response = self.register_identity(&name_commitment).await?;
+        let registration_txid = self.register_identity(&name_commitment).await?;
 
         Ok(Identity {
-            registration_txid: identity_response,
-            name_commitment: name_commitment,
+            registration_txid,
+            name_commitment,
         })
     }
 
@@ -275,7 +278,7 @@ pub struct IdentityError {
 
 #[derive(Debug, Display)]
 pub enum ErrorKind {
-    #[display(fmt = "Something went wrong while sending a request to the komodod RPC.")]
+    #[display(fmt = "Something went wrong while sending a request to the verusd RPC.")]
     VrscRpcError(vrsc_rpc::Error),
     Other(String),
 }
