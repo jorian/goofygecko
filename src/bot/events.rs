@@ -18,7 +18,7 @@ use serenity::{
     },
     prelude::{Context, EventHandler},
 };
-use sqlx::{Pool, Postgres};
+use sqlx::{query, Pool, Postgres};
 use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 use vrsc_rpc::{Auth, Client, RpcApi};
@@ -74,23 +74,45 @@ impl EventHandler for Handler {
                             let metadata =
                                 crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await;
 
+                            let pool = {
+                                let data_read = &ctx.data.read().await;
+                                data_read.get::<DatabasePool>().unwrap().clone()
+                            };
+
+                            let guild_id = {
+                                let data_read = &ctx.data.read().await;
+                                *data_read.get::<GId>().unwrap()
+                            };
+
+                            let mut owner = String::from("_not in Discord_");
+
+                            for address in identity.identity.primaryaddresses {
+                                let query = query!("SELECT discord_user_id FROM user_register WHERE vrsc_address = $1", address.to_string());
+                                if let Ok(result) = query.fetch_optional(&pool).await {
+                                    if let Some(record) = result {
+                                        let discord_user_id = record.discord_user_id;
+                                        if let Ok(member) = ctx
+                                            .http
+                                            .get_member(guild_id, discord_user_id as u64)
+                                            .await
+                                        {
+                                            owner = member.user.tag();
+                                        }
+                                    }
+                                }
+                            }
+                            debug!("owner: {}", owner);
+
                             command
                                 .create_interaction_response(&ctx.http, |response| {
                                     response.interaction_response_data(|data| {
                                         data.embed(|e| {
-                                            e.title(format!("Introducing {}", metadata.name))
+                                            e.title(metadata.name)
                                                 .description(format!(
                                                     "**Rarity:** {}\n",
                                                     metadata.rarity
                                                 ))
-                                                .field(
-                                                    "Transaction",
-                                                    format!(
-                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
-                                                    metadata.image
-                                                ),
-                                                    true,
-                                                )
+                                                .field("Owner", owner, true)
                                                 .field(
                                                     "Metadata",
                                                     format!(

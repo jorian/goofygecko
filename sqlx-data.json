@@ -70,5 +70,25 @@
       }
     },
     "query": "SELECT discord_user_id FROM user_register WHERE discord_user_id = $1"
+  },
+  "f9be0bc23d27631264b045f8d9861965907cef7c064ae3d3a7c47d4ce5dd8ad1": {
+    "describe": {
+      "columns": [
+        {
+          "name": "discord_user_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT discord_user_id FROM user_register WHERE vrsc_address = $1"
   }
 }
