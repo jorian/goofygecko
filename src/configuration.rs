@@ -42,6 +42,7 @@ impl DatabaseSettings {
 }
 #[derive(Deserialize, Clone)]
 pub struct ApplicationSettings {
+    pub testnet: bool,
     pub ardrive_wallet_location: String,
     pub assets_dir: String,
     pub output_dir: String,

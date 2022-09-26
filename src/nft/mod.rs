@@ -48,7 +48,12 @@ pub struct VerusNFT {
 
 impl VerusNFT {
     pub async fn generate(user_id: u64, app_config: &Settings) -> Self {
-        let client = Client::chain("vrsctest", Auth::ConfigFile, None).expect("a verus client");
+        let asset_config_location = format!("{}/config.json", &app_config.application.assets_dir);
+        let client = match app_config.application.testnet {
+            true => Client::chain("vrsctest", Auth::ConfigFile, None).expect("a verus client"),
+            false => Client::default(),
+        };
+
         let address = client.get_new_address().unwrap();
 
         let mut nft_builder = Self {
@@ -64,9 +69,8 @@ impl VerusNFT {
             identity: None,
         };
 
-        let config_location = format!("{}/config.json", &app_config.application.assets_dir);
         nft_builder
-            .generate_metadata(&config_location, &app_config.application.output_dir)
+            .generate_metadata(&asset_config_location, &app_config.application.output_dir)
             .await;
         nft_builder
             .generate_art(
@@ -81,10 +85,10 @@ impl VerusNFT {
         nft_builder
             .arweave_metadata_upload(&app_config.application.ardrive_wallet_location)
             .await;
-        nft_builder.create_identity().await;
+        nft_builder
+            .create_identity(app_config.application.testnet)
+            .await;
 
-        // verus client: get new address
-        // store address in database, linked to user (should i do that here??)
         nft_builder
     }
 
@@ -206,7 +210,7 @@ impl VerusNFT {
         }
     }
 
-    async fn create_identity(&mut self) {
+    async fn create_identity(&mut self, testnet: bool) {
         debug!(
             "creating identity with primary address: {}",
             &self.vrsc_address
@@ -228,14 +232,12 @@ impl VerusNFT {
 
         let mut identity_builder = Identity::builder();
 
-        // if config is testnet {
-        identity_builder.testnet(true);
-        // }
         if let Err(e) = identity_builder
             .name(&format!("{}", self.sequence))
             .on_currency_name(&self.edition)
             .add_address(&self.vrsc_address)
             .with_content_map(json!({ vdxfkey_hex: &vdxfvalue_hex }))
+            .testnet(testnet)
             .validate()
         {
             error!("something went wrong while creating the identity: {:?}", e);

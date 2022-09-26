@@ -14,7 +14,7 @@ use verusnftlib::{
     bot::{events, framework::*, global_data::*, utils::database::*},
     configuration::*,
 };
-use vrsc_rpc::{Auth, RpcApi};
+use vrsc_rpc::RpcApi;
 
 #[tokio::main(worker_threads = 8)]
 #[instrument]
@@ -29,7 +29,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         return Ok(());
     }
 
-    let client = vrsc_rpc::Client::chain("vrsctest", Auth::ConfigFile, None).expect("A client");
+    let client = match config.application.testnet {
+        true => vrsc_rpc::Client::chain("vrsctest", vrsc_rpc::Auth::ConfigFile, None),
+        false => vrsc_rpc::Client::chain("VRSC", vrsc_rpc::Auth::ConfigFile, None),
+    }?;
+
     if let Err(e) = client.ping() {
         error!("Verus daemon not ready: {:?}", e);
         return Ok(());

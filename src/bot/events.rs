@@ -36,6 +36,17 @@ impl EventHandler for Handler {
         if let Interaction::ApplicationCommand(command) = interaction {
             info!("received command interaction: {:?}", command);
 
+            let app_config = {
+                let data_read = &ctx.data.read().await;
+                data_read.get::<AppConfig>().unwrap().clone()
+            };
+
+            let client = match app_config.application.testnet {
+                true => Client::chain("vrsctest", Auth::ConfigFile, None),
+                false => Client::chain("VRSC", Auth::ConfigFile, None),
+            }
+            .expect("a verus daemon client");
+
             match command.data.name.as_str() {
                 "gecko" => {
                     let option = command
@@ -50,8 +61,6 @@ impl EventHandler for Handler {
                     if let CommandDataOptionValue::Integer(n) = option {
                         debug!("got number {} to look up", n);
 
-                        let client = Client::chain("vrsctest", Auth::ConfigFile, None)
-                            .expect("A verus daemon client");
                         let identity_res =
                             client.get_identity(&format!("{}.geckotest@", *n as u64));
 
@@ -158,8 +167,6 @@ impl EventHandler for Handler {
                         .vrsc_address
                         .expect("an address for this user");
 
-                    let client = Client::chain("vrsctest", Auth::ConfigFile, None)
-                        .expect("A verus daemon client");
                     let identities_with_address = client
                         .get_identities_with_address(&address, None, None, None)
                         .expect("An array of identities");

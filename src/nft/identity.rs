@@ -246,8 +246,8 @@ impl IdentityBuilder {
         namecommitment: &NameCommitment,
     ) -> Result<Txid, IdentityError> {
         let client = match self.testnet {
-            false => Client::chain("VRSC", vrsc_rpc::Auth::ConfigFile, None),
             true => Client::chain("vrsctest", vrsc_rpc::Auth::ConfigFile, None),
+            false => Client::chain("VRSC", vrsc_rpc::Auth::ConfigFile, None),
         }?;
 
         let id_txid = client.registeridentity(
