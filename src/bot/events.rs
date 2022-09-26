@@ -1,6 +1,6 @@
 use crate::{
     bot::{
-        global_data::{AppConfig, DatabasePool, GuildId as GId},
+        global_data::{AppConfig, DatabasePool},
         utils::embeds,
     },
     configuration::Settings,
@@ -88,10 +88,11 @@ impl EventHandler for Handler {
                                 data_read.get::<DatabasePool>().unwrap().clone()
                             };
 
-                            let guild_id = {
-                                let data_read = &ctx.data.read().await;
-                                *data_read.get::<GId>().unwrap()
-                            };
+                            let guild_id = app_config
+                                .application
+                                .discord_guild_id
+                                .parse::<u64>()
+                                .expect("a number");
 
                             let mut owner = String::from("_not in Discord_");
 
@@ -232,10 +233,18 @@ impl EventHandler for Handler {
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
-        let guild_id = {
+        let app_config = {
             let data_read = ctx.data.read().await;
-            GuildId(*data_read.get::<GId>().unwrap())
+            data_read.get::<AppConfig>().unwrap().clone()
         };
+
+        let guild_id = GuildId(
+            app_config
+                .application
+                .discord_guild_id
+                .parse::<u64>()
+                .expect("a discord guild id"),
+        );
 
         let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
             commands
@@ -339,7 +348,12 @@ async fn process_new_member(
                 match new_member.user.create_dm_channel(&ctx).await {
                     Ok(dm) => {
                         let data_read = ctx.data.read().await;
-                        let guild_id = data_read.get::<GId>().unwrap().clone();
+                        let app_config = data_read.get::<AppConfig>().unwrap().clone();
+                        let guild_id = app_config
+                            .application
+                            .discord_guild_id
+                            .parse::<u64>()
+                            .expect("a discord guild id");
 
                         let channels = ctx.http.get_channels(guild_id).await.unwrap();
                         let channel = channels

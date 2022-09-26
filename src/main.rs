@@ -58,19 +58,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .await
         .expect("Error creating serenity client");
 
+    // in a block to close the write borrow
     {
-        // in a block to close the write borrow
         let mut data = client.data.write().await;
+        data.insert::<AppConfig>(config.clone());
 
         let pg_pool = obtain_postgres_pool(&config.database).await?;
         sqlx::migrate!("./migrations").run(&pg_pool).await?;
         data.insert::<DatabasePool>(pg_pool);
-
-        let guild_id = config.application.discord_guild_id.clone();
-        data.insert::<GuildId>(guild_id.parse()?);
-
-        let sequence_start = config.application.sequence_start;
-        data.insert::<SequenceStart>(sequence_start as i64);
     }
 
     debug!("starting client");
