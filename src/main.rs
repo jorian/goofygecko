@@ -23,7 +23,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     setup_logging().await?;
 
-    if !Path::new(".ardrivewallet.json").exists() {
+    let ardrive_wallet_location = &config.application.ardrive_wallet_location;
+    if !Path::new(ardrive_wallet_location).exists() {
         error!("ardrivewallet not found");
         return Ok(());
     }

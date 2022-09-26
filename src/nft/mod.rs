@@ -85,9 +85,13 @@ impl VerusNFT {
                 &app_config.application.output_dir,
             )
             .await;
-        nft_builder.arweave_image_upload().await;
+        nft_builder
+            .arweave_image_upload(&app_config.application.ardrive_wallet_location)
+            .await;
         nft_builder.update_metadata().await;
-        nft_builder.arweave_metadata_upload().await;
+        nft_builder
+            .arweave_metadata_upload(&app_config.application.ardrive_wallet_location)
+            .await;
         nft_builder.create_identity().await;
 
         // verus client: get new address
@@ -124,10 +128,10 @@ impl VerusNFT {
         }
     }
 
-    async fn arweave_image_upload(&mut self) {
+    async fn arweave_image_upload(&mut self, arweave_wallet_location: &str) {
         if let Some(path) = self.generated_image_path.clone() {
             let mut arweave_tx =
-                arweave::ArweaveTransaction::new(Path::new(".ardrivewallet.json")).await;
+                arweave::ArweaveTransaction::new(Path::new(arweave_wallet_location)).await;
 
             debug!("arweave instance created");
 
@@ -191,10 +195,10 @@ impl VerusNFT {
         }
     }
 
-    async fn arweave_metadata_upload(&mut self) {
+    async fn arweave_metadata_upload(&mut self, arweave_wallet_location: &str) {
         if let Some(path) = self.generated_metadata_path.clone() {
             let mut arweave_tx =
-                arweave::ArweaveTransaction::new(Path::new(".ardrivewallet.json")).await;
+                arweave::ArweaveTransaction::new(Path::new(arweave_wallet_location)).await;
 
             debug!("arweave instance created");
 
