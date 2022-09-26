@@ -6,30 +6,24 @@ Is concerned with:
 - rarity generator based on discord id
  */
 
-// use std::path::{Path, PathBuf};
+pub(crate) mod art;
+pub(crate) mod arweave;
+mod config;
+pub(crate) mod identity;
+pub(crate) mod metadata;
 
-// use tracing::log::error;
-
+use serde_json::{json, Value};
 use std::{
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
     str::FromStr,
 };
-
-use serde_json::{json, Value};
 // use serenity::prelude::{Mutex, RwLock};
+use crate::configuration::Settings;
+use identity::Identity;
 use tracing::{debug, error, info};
 use vrsc_rpc::{json::vrsc::Address, Auth, Client, RpcApi};
-
-use crate::configuration::Settings;
-
-use super::identity::Identity;
-
-pub(crate) mod art;
-pub(crate) mod arweave;
-mod config;
-pub(crate) mod metadata;
 
 /// an overarching struct that keeps track of all the details when generating a single NFT:
 /// - art
