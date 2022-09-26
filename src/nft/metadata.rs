@@ -19,11 +19,12 @@ pub async fn generate(user_id: u64, sequence: u64, config_location: &Path) /* ->
             .to_str()
             .expect("invalid asset_config location"),
     )
-    .expect("Error parsing config");
+    .expect("Error parsing asset config");
 
     let output_directory = Path::new("./generated");
     if !output_directory.exists() {
-        std::fs::create_dir(output_directory).unwrap(); //TODO catch error
+        std::fs::create_dir(output_directory)
+            .expect("the directory `generated` could not be created")
     }
     generate_attributes(user_id, sequence, &asset_config, &output_directory).await;
 }

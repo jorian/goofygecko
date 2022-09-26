@@ -7,13 +7,9 @@ use reqwest::{
     header::{HeaderMap, HeaderValue, CACHE_CONTROL},
     Method,
 };
-/// Handles connection and communication to and from Arweave
 use std::path::{Path, PathBuf};
 use tracing::debug;
 use url::Url;
-
-// first we need to create and sign the transaction for the image.
-// that results in a id which we subsequently use in the metadata file.
 
 pub struct ArweaveTransaction {
     keypair_location: PathBuf,
@@ -49,7 +45,6 @@ impl ArweaveTransaction {
         let price_terms = self.arweave.get_price_terms(1.5).await.unwrap();
         debug!("price terms: {:?}", &price_terms);
 
-        // let tag: Tag<Base64> = Tag::from_utf8_strs("Content-Type", &content_type).unwrap();
         if let Ok(tx) = self
             .arweave
             .create_transaction_from_file_path(
@@ -65,7 +60,6 @@ impl ArweaveTransaction {
             )
             .await
         {
-            // sign and send the transaction
             let signed_tx = self.arweave.sign_transaction(tx).unwrap();
 
             debug!("signed txid: {}", &signed_tx.id.to_string());
@@ -73,7 +67,6 @@ impl ArweaveTransaction {
             let tx = self.arweave.post_transaction(&signed_tx).await.unwrap();
 
             self.file_location = Some(file_location.into());
-            // self.content_type = Some(content_type.into());
             self.id = Some(tx.0.clone());
 
             return Ok(tx.0.to_string());
@@ -149,9 +142,6 @@ pub async fn get_metadata_json<'a>(tx_id: &'a str) -> NFTMetadata {
         .headers(headers)
         .send()
         .await;
-    // let res = reqwest::get(format!("https://arweave.net/tx/{}/data", tx_id)).await;
-
-    debug!("res: {:?}", res);
 
     let base64_data = res.expect("a request").text().await.expect("base64_data");
     debug!("{:?}", base64_data);
@@ -160,7 +150,6 @@ pub async fn get_metadata_json<'a>(tx_id: &'a str) -> NFTMetadata {
     debug!("text: {:?}", json_text);
 
     let metadata: NFTMetadata = serde_json::from_slice(&json_text).expect("NFTMetadata object");
-    //json().await.expect("a json");
 
     metadata
 }

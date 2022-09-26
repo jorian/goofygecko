@@ -12,6 +12,8 @@ mod config;
 pub(crate) mod identity;
 pub(crate) mod metadata;
 
+use crate::configuration::Settings;
+use identity::Identity;
 use serde_json::{json, Value};
 use std::{
     fs::{self, File},
@@ -19,9 +21,6 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-// use serenity::prelude::{Mutex, RwLock};
-use crate::configuration::Settings;
-use identity::Identity;
 use tracing::{debug, error, info};
 use vrsc_rpc::{json::vrsc::Address, Auth, Client, RpcApi};
 
@@ -31,10 +30,6 @@ use vrsc_rpc::{json::vrsc::Address, Auth, Client, RpcApi};
 /// - arweave details
 /// - identity details
 ///
-
-// static CONFIG_LOCATION: &str = "assets/config.json";
-// static ASSETS_LOCATION: &str = "assets/";
-// static OUTPUT_LOCATION: &str = "generated/";
 
 #[derive(Debug)]
 pub struct VerusNFT {
@@ -152,13 +147,6 @@ impl VerusNFT {
     }
 
     async fn update_metadata(&mut self) {
-        // self.metadata
-        // self.image_hash
-        // put image_hash in metadata.
-
-        // read metadata file
-        // update `image` key with actual location on Arweave
-        // save metadata file
         if let Some(path) = self.generated_metadata_path.clone() {
             let metadata_file = fs::read_to_string(&path).unwrap();
             let mut metadata: Value = serde_json::from_str(&metadata_file).unwrap();
