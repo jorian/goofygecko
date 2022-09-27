@@ -13,8 +13,6 @@ A Discord server that is its own community, where every new entrant gets a free 
 
 ## Idea
 
-![An example Gecko](/gecko-preview.png)
-
 ### Introduction
 
 A new Discord will be made with the purpose of having a community around Geckos. The Gecko is chosen because of the legacy Verus has to the Komodo Platform.  
