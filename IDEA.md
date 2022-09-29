@@ -45,7 +45,7 @@ Some of the traits and characteristics:
 -	hat / sombrero / cap
 -	pipe / cigarette / cigar
 
-The image and the metadata are uploaded to Arweave and tagged with the Verus identity that is controlling them. This way, instead of having an Account on Ethereum that controls the NFT, a Verus ID controlling the NFT.
+The image and the metadata are uploaded to Arweave and tagged with the Verus identity that is controlling them. This way, instead of having an Account on Ethereum that controls the NFT, a Verus ID controls ownership of the NFT.
 
 The identity is created through a centralized currency GoofyGecko@. All NFTs will be controlled by a Goofy Gecko sub-ID that is issued from the GoofyGecko@ currency.
 
