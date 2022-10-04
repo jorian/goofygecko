@@ -131,6 +131,7 @@ pub async fn get_transaction_by_identity(gecko_number: &str) -> String {
 }
 
 pub async fn get_metadata_json<'a>(tx_id: &'a str) -> NFTMetadata {
+    debug!("getting metadata");
     let client = reqwest::Client::new();
     let mut headers = HeaderMap::new();
     headers.insert(CACHE_CONTROL, HeaderValue::from_str("no-cache").unwrap());
@@ -144,7 +145,7 @@ pub async fn get_metadata_json<'a>(tx_id: &'a str) -> NFTMetadata {
         .await;
 
     let base64_data = res.expect("a request").text().await.expect("base64_data");
-    debug!("{:?}", base64_data);
+    debug!("base_64: {:?}", base64_data);
     let json_text = base64_url::decode(&base64_data).expect("decoded base64 data");
 
     debug!("text: {:?}", json_text);

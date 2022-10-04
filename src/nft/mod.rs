@@ -98,8 +98,9 @@ impl VerusNFT {
 
         // TODO this is really ugly, need one source of truth
         // ideally metadata::generate returns the location of the generated metadata, which I can update here:
-        let path = PathBuf::from_str(&format!("{}{}.json", output_location, self.user_id))
-            .expect("parsing metadata path failed");
+        let path = PathBuf::new()
+            .join(output_location)
+            .join(format!("{}.json", self.user_id));
 
         self.generated_metadata_path = Some(path);
     }
@@ -152,6 +153,7 @@ impl VerusNFT {
 
     async fn update_metadata(&mut self) {
         if let Some(path) = self.generated_metadata_path.clone() {
+            debug!("generated metadata path: {:?}", &path);
             let metadata_file = fs::read_to_string(&path).unwrap();
             let mut metadata: Value = serde_json::from_str(&metadata_file).unwrap();
 
