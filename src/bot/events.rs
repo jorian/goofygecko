@@ -4,7 +4,7 @@ use crate::{
         utils::embeds,
     },
     configuration::Settings,
-    nft::VerusNFT,
+    nft::{arweave, metadata::NFTMetadata, VerusNFT},
 };
 use serenity::{
     async_trait,
@@ -80,72 +80,132 @@ impl EventHandler for Handler {
 
                             debug!("encoded_tx_hash: {:?}", &encoded_tx_hash_str);
 
-                            let metadata =
-                                crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await;
+                            // at this point, it could happen that the metadata file is unavailable. Usually because
+                            // it was just created and needs to be confirmed still.
+                            match crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await
+                            {
+                                Ok(raw_json) => {
+                                    // the raw data json is not yet the NFTMetadata struct. It could happen it is not the metadata struct,
+                                    // that would mean a whole big mess.
+                                    if let Ok(metadata) =
+                                        serde_json::from_value::<NFTMetadata>(raw_json)
+                                    {
+                                        let pool = {
+                                            let data_read = &ctx.data.read().await;
+                                            data_read.get::<DatabasePool>().unwrap().clone()
+                                        };
 
-                            let pool = {
-                                let data_read = &ctx.data.read().await;
-                                data_read.get::<DatabasePool>().unwrap().clone()
-                            };
+                                        let guild_id = app_config
+                                            .application
+                                            .discord_guild_id
+                                            .parse::<u64>()
+                                            .expect("a number");
 
-                            let guild_id = app_config
-                                .application
-                                .discord_guild_id
-                                .parse::<u64>()
-                                .expect("a number");
+                                        let mut owner = String::from("_not in Discord_");
 
-                            let mut owner = String::from("_not in Discord_");
-
-                            for address in identity.identity.primaryaddresses {
-                                let query = query!("SELECT discord_user_id FROM user_register WHERE vrsc_address = $1", address.to_string());
-                                if let Ok(result) = query.fetch_optional(&pool).await {
-                                    if let Some(record) = result {
-                                        let discord_user_id = record.discord_user_id;
-                                        if let Ok(member) = ctx
-                                            .http
-                                            .get_member(guild_id, discord_user_id as u64)
-                                            .await
-                                        {
-                                            owner = member.user.tag();
+                                        for address in identity.identity.primaryaddresses {
+                                            let query = query!("SELECT discord_user_id FROM user_register WHERE vrsc_address = $1", address.to_string());
+                                            if let Ok(result) = query.fetch_optional(&pool).await {
+                                                if let Some(record) = result {
+                                                    let discord_user_id = record.discord_user_id;
+                                                    if let Ok(member) = ctx
+                                                        .http
+                                                        .get_member(
+                                                            guild_id,
+                                                            discord_user_id as u64,
+                                                        )
+                                                        .await
+                                                    {
+                                                        owner = member.user.tag();
+                                                        break;
+                                                    }
+                                                }
+                                            }
                                         }
+                                        debug!("owner: {}", owner);
+
+                                        command
+                                            .create_interaction_response(&ctx.http, |response| {
+                                                response.interaction_response_data(|data| {
+                                                    data.embed(|e| {
+                                                        e.title(metadata.name)
+                                                            .description(format!(
+                                                                "**Rarity:** {}\n",
+                                                                metadata.rarity
+                                                            ))
+                                                            .field("Owner", owner, true)
+                                                            .field(
+                                                                "Metadata",
+                                                                format!(
+                                                                "[view](https://v2.viewblock.io/arweave/tx/{})",
+                                                                encoded_tx_hash_str
+                                                            ),
+                                                                true,
+                                                            )
+                                                            .image(format!(
+                                                                "https://arweave.net/{}",
+                                                                &metadata.image
+                                                            ))
+                                                    });
+                                                    data.ephemeral(false)
+                                                })
+                                            })
+                                            .await
+                                            .expect("a response to a /gecko interaction");
+                                    } else {
+                                        command
+                                            .create_interaction_response(&ctx.http, |response| {
+                                                response.interaction_response_data(|data| {
+                                                    data.content("Conversion of metadata json failed. This is UBI and FUBAR")
+                                                })
+                                            })
+                                            .await.unwrap();
                                     }
                                 }
+                                Err(e) => match e.kind {
+                                    arweave::ErrorKind::NotConfirmed => {
+                                        command
+                                            .create_interaction_response(&ctx.http, |response| {
+                                                response.interaction_response_data(|data| {
+                                                    data.content("NFT not yet confirmed on Arweave")
+                                                })
+                                            })
+                                            .await
+                                            .unwrap();
+                                    }
+                                    _ => {
+                                        command
+                                            .create_interaction_response(&ctx.http, |response| {
+                                                response.interaction_response_data(|data| {
+                                                    data.content(format!(
+                                                        "Something weird happened: {:?}",
+                                                        e
+                                                    ))
+                                                })
+                                            })
+                                            .await
+                                            .unwrap();
+                                    }
+                                },
                             }
-                            debug!("owner: {}", owner);
-
-                            command
+                        } else {
+                            let _ = command
                                 .create_interaction_response(&ctx.http, |response| {
                                     response.interaction_response_data(|data| {
-                                        data.embed(|e| {
-                                            e.title(metadata.name)
-                                                .description(format!(
-                                                    "**Rarity:** {}\n",
-                                                    metadata.rarity
-                                                ))
-                                                .field("Owner", owner, true)
-                                                .field(
-                                                    "Metadata",
-                                                    format!(
-                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
-                                                    encoded_tx_hash_str
-                                                ),
-                                                    true,
-                                                )
-                                                .image(format!(
-                                                    "https://arweave.net/{}",
-                                                    &metadata.image
-                                                ))
-                                        });
-                                        data.ephemeral(false)
+                                        data.content(
+                                            "Identity not found, likely not confirmed on Verus",
+                                        )
                                     })
                                 })
-                                .await
-                                .expect("a response to a /gecko interaction");
+                                .await;
                         }
                     } else {
                         error!("no integer was entered")
                     }
                 }
+                // in this list could be unconfirmed NFTs;
+                // - identity not confirmed
+                // - arweave txns not confirmed
                 "list" => {
                     let data_read = ctx.data.read().await;
                     let pg_pool = data_read.get::<DatabasePool>().clone().unwrap();
@@ -187,44 +247,76 @@ impl EventHandler for Handler {
 
                         debug!("encoded_tx_hash: {:?}", &encoded_tx_hash_str);
 
-                        let metadata =
-                            crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await;
-
-                        command
-                            .create_interaction_response(&ctx.http, |response| {
-                                response.interaction_response_data(|data| {
-                                    data.embed(|e| {
-                                        e.title(format!("Introducing {}", metadata.name))
-                                            .description(format!(
-                                                "**Rarity:** {}\n",
-                                                metadata.rarity
-                                            ))
-                                            .field(
-                                                "Transaction",
-                                                format!(
-                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
-                                                    metadata.image
-                                                ),
-                                                true,
-                                            )
-                                            .field(
-                                                "Metadata",
-                                                format!(
-                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
-                                                    encoded_tx_hash_str
-                                                ),
-                                                true,
-                                            )
-                                            .image(format!(
-                                                "https://arweave.net/{}",
-                                                &metadata.image
-                                            ))
-                                    });
-                                    data.ephemeral(true)
-                                })
-                            })
-                            .await
-                            .expect("a response to a /list interaction");
+                        match crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await {
+                            Ok(raw_json) => {
+                                // the raw data json is not yet the NFTMetadata struct. It could happen it is not the metadata struct,
+                                // that would mean a whole big mess.
+                                if let Ok(metadata) =
+                                    serde_json::from_value::<NFTMetadata>(raw_json)
+                                {
+                                    command
+                                            .create_interaction_response(&ctx.http, |response| {
+                                                response.interaction_response_data(|data| {
+                                                    data.embed(|e| {
+                                                        e.title(format!("Introducing {}", metadata.name))
+                                                            .description(format!(
+                                                                "**Rarity:** {}\n",
+                                                                metadata.rarity
+                                                            ))
+                                                            .field(
+                                                                "Transaction",
+                                                                format!(
+                                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
+                                                                    metadata.image
+                                                                ),
+                                                                true,
+                                                            )
+                                                            .field(
+                                                                "Metadata",
+                                                                format!(
+                                                                    "[view](https://v2.viewblock.io/arweave/tx/{})",
+                                                                    encoded_tx_hash_str
+                                                                ),
+                                                                true,
+                                                            )
+                                                            .image(format!(
+                                                                "https://arweave.net/{}",
+                                                                &metadata.image
+                                                            ))
+                                                    });
+                                                    data.ephemeral(true)
+                                                })
+                                            })
+                                            .await
+                                            .expect("a response to a /list interaction");
+                                }
+                            }
+                            Err(e) => match e.kind {
+                                arweave::ErrorKind::NotConfirmed => {
+                                    command
+                                        .create_interaction_response(&ctx.http, |response| {
+                                            response.interaction_response_data(|data| {
+                                                data.content("NFT not yet confirmed on Arweave")
+                                            })
+                                        })
+                                        .await
+                                        .unwrap();
+                                }
+                                _ => {
+                                    command
+                                        .create_interaction_response(&ctx.http, |response| {
+                                            response.interaction_response_data(|data| {
+                                                data.content(format!(
+                                                    "Something weird happened: {:?}",
+                                                    e
+                                                ))
+                                            })
+                                        })
+                                        .await
+                                        .unwrap();
+                                }
+                            },
+                        }
                     }
                 }
                 _ => {}
@@ -333,7 +425,6 @@ async fn process_new_member(
         let sequence = sequence + app_config.application.sequence_start as i64;
         match create_nft(new_member.user.id.0, sequence, &app_config).await {
             Ok(verus_nft) => {
-                // if the creation was ok, there should be a metadata JSON file.
                 if let Err(e) = sqlx::query!(
                     "INSERT INTO user_register (discord_user_id, vrsc_address) VALUES ($1, $2)",
                     new_member.user.id.0 as i64,
@@ -385,7 +476,7 @@ async fn create_nft(user_id: u64, sequence: i64, app_config: &Settings) -> Resul
         "creating {} nft #{} for {}",
         app_config.application.series, sequence, user_id
     );
-    let nft_builder = crate::nft::VerusNFT::generate(user_id, app_config).await;
+    let verus_nft = crate::nft::VerusNFT::generate(user_id, app_config).await;
 
-    Ok(nft_builder)
+    Ok(verus_nft)
 }

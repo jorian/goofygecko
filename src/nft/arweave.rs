@@ -1,11 +1,10 @@
-use super::metadata::NFTMetadata;
 use arloader::{
     transaction::{Base64, FromUtf8Strs, Tag},
     Arweave,
 };
 use reqwest::{
     header::{HeaderMap, HeaderValue, CACHE_CONTROL},
-    Method,
+    Method, Response,
 };
 use std::path::{Path, PathBuf};
 use tracing::debug;
@@ -130,27 +129,104 @@ pub async fn get_transaction_by_identity(gecko_number: &str) -> String {
     txid.to_string()
 }
 
-pub async fn get_metadata_json<'a>(tx_id: &'a str) -> NFTMetadata {
+// todo: split in request and metadata parsing
+pub async fn get_metadata_json<'a>(tx_id: &'a str) -> Result<serde_json::Value, ArweaveError> {
+    // first check for status. If unconfirmed, return error
+    // then get data, it should exist since it was confirmed, but could still go wrong of course.
+    let _ = get_transaction_confirmations(tx_id).await?;
+
+    // at this point we know the arweave tx is confirmed.
     debug!("getting metadata");
+
+    let res = req(&format!("https://arweave.net/tx/{}/data", tx_id)).await?;
+    let base64_data = res.text().await?;
+    debug!("base64_data: {:?}", base64_data);
+    if base64_data.is_empty() {
+        return Err(ErrorKind::NoData.into());
+    }
+    let json_text = base64_url::decode(&base64_data)?;
+
+    debug!("decoded base64 data text: {:?}", json_text);
+
+    Ok(serde_json::from_slice(&json_text)?)
+}
+
+pub async fn get_transaction_status(txid: &str) -> Result<serde_json::Value, ArweaveError> {
+    debug!("getting arweave transaction status");
+
+    if let Ok(res) = req(&format!("https://arweave.net/tx/{}/status", txid)).await {
+        let json: serde_json::Value = res.json().await?;
+
+        Ok(json)
+    } else {
+        Err(ErrorKind::NoData.into())
+    }
+}
+
+pub async fn get_transaction_confirmations(txid: &str) -> Result<i64, ArweaveError> {
+    let transaction_status = get_transaction_status(txid).await?;
+
+    if let Some(confs) = transaction_status["number_of_confirmations"].as_i64() {
+        Ok(confs)
+    } else {
+        debug!("not valid json: {:#?}", transaction_status);
+        return Err(ErrorKind::InvalidJson(String::from(
+            "Expected key 'number_of_confirmations' and i64 as value",
+        ))
+        .into());
+    }
+}
+
+pub async fn req(url: &str) -> Result<Response, ArweaveError> {
     let client = reqwest::Client::new();
     let mut headers = HeaderMap::new();
     headers.insert(CACHE_CONTROL, HeaderValue::from_str("no-cache").unwrap());
-    let res = client
-        .request(
-            Method::GET,
-            format!("https://arweave.net/tx/{}/data", tx_id),
-        )
+
+    client
+        .request(Method::GET, url)
         .headers(headers)
         .send()
-        .await;
+        .await
+        .map_err(|e| e.into())
+}
 
-    let base64_data = res.expect("a request").text().await.expect("base64_data");
-    debug!("base_64: {:?}", base64_data);
-    let json_text = base64_url::decode(&base64_data).expect("decoded base64 data");
+#[derive(Debug, Display)]
+#[display(fmt = "{}", kind)]
+pub struct ArweaveError {
+    pub kind: ErrorKind,
+    source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
+}
 
-    debug!("text: {:?}", json_text);
+#[derive(Debug, Display)]
+pub enum ErrorKind {
+    InvalidJson(String),
+    NotConfirmed,
+    NoData,
+    ReqwestError(reqwest::Error),
+    JsonError(serde_json::Error),
+    Base64DecodeError(base64_url::base64::DecodeError),
+}
 
-    let metadata: NFTMetadata = serde_json::from_slice(&json_text).expect("NFTMetadata object");
+impl From<ErrorKind> for ArweaveError {
+    fn from(kind: ErrorKind) -> Self {
+        ArweaveError { kind, source: None }
+    }
+}
 
-    metadata
+impl From<reqwest::Error> for ArweaveError {
+    fn from(e: reqwest::Error) -> Self {
+        ErrorKind::ReqwestError(e).into()
+    }
+}
+
+impl From<serde_json::Error> for ArweaveError {
+    fn from(e: serde_json::Error) -> Self {
+        ErrorKind::JsonError(e).into()
+    }
+}
+
+impl From<base64_url::base64::DecodeError> for ArweaveError {
+    fn from(e: base64_url::base64::DecodeError) -> Self {
+        ErrorKind::Base64DecodeError(e).into()
+    }
 }

@@ -19,7 +19,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
-    str::FromStr,
+    time::Duration,
 };
 use tracing::{debug, error, info};
 use vrsc_rpc::{json::vrsc::Address, Auth, Client, RpcApi};
@@ -88,6 +88,8 @@ impl VerusNFT {
         nft_builder
             .create_identity(app_config.application.testnet)
             .await;
+
+        nft_builder.is_confirmed(&client).await;
 
         nft_builder
     }
@@ -260,7 +262,49 @@ impl VerusNFT {
             }
         }
     }
+
+    async fn is_confirmed(&self, client: &Client) {
+        loop {
+            if let Some(identity) = self.identity.as_ref() {
+                if let Ok(tx) = client.get_transaction(&identity.registration_txid, None) {
+                    if tx.confirmations > 0 {
+                        if let Ok(confs) = arweave::get_transaction_confirmations(
+                            self.uploaded_metadata_tx_hash.as_ref().unwrap(),
+                        )
+                        .await
+                        {
+                            if confs > 0 {
+                                return;
+                            } else {
+                                debug!("arweave tx not yet confirmed");
+                                tokio::time::sleep(Duration::from_secs(5)).await;
+                            }
+                        } else {
+                            debug!("could not get arweave transaction");
+                            tokio::time::sleep(Duration::from_secs(1)).await;
+                        }
+                    } else {
+                        debug!("identity not yet confirmed");
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                    }
+                } else {
+                    debug!("could not get transaction");
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            } else {
+                panic!("no identity found");
+            }
+        }
+    }
 }
+
+// impl TryFrom<serde_json::Value> for NFTMetadata {
+//     type Error;
+
+//     fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
+//         todo!()
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
