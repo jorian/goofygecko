@@ -4,7 +4,11 @@ use crate::{
         utils::embeds,
     },
     configuration::Settings,
-    nft::{arweave, metadata::NFTMetadata, VerusNFT},
+    nft::{
+        arweave::{self, get_transaction_by_gecko_number},
+        metadata::NFTMetadata,
+        VerusNFT,
+    },
 };
 use serenity::{
     async_trait,
@@ -68,63 +72,53 @@ impl EventHandler for Handler {
 
                         if let Ok(identity) = identity_res {
                             let cm = identity.identity.contentmap;
-                            let hex_tx = cm
-                                .get("9a55eaaad7bacc9f37a449e315ff32fedc07b126")
-                                .expect("a vdxf key that indicates the location of the metadata");
+                            let arweave_txid = get_transaction_by_gecko_number(*n).await;
 
-                            let hex_decoded = hex::decode(hex_tx).expect("hex decode");
-
-                            debug!("retrieved from contentmap: {:?}", hex_decoded);
-
-                            let encoded_tx_hash_str = base64_url::encode(&hex_decoded);
-
-                            debug!("encoded_tx_hash: {:?}", &encoded_tx_hash_str);
-
-                            // at this point, it could happen that the metadata file is unavailable. Usually because
-                            // it was just created and needs to be confirmed still.
-                            match crate::nft::arweave::get_metadata_json(&encoded_tx_hash_str).await
-                            {
+                            match crate::nft::arweave::get_metadata_json(&arweave_txid).await {
                                 Ok(raw_json) => {
+                                    debug!("{:?}", &raw_json);
                                     // the raw data json is not yet the NFTMetadata struct. It could happen it is not the metadata struct,
                                     // that would mean a whole big mess.
-                                    if let Ok(metadata) =
-                                        serde_json::from_value::<NFTMetadata>(raw_json)
-                                    {
-                                        let pool = {
-                                            let data_read = &ctx.data.read().await;
-                                            data_read.get::<DatabasePool>().unwrap().clone()
-                                        };
+                                    match serde_json::from_value::<NFTMetadata>(raw_json) {
+                                        Ok(metadata) => {
+                                            let pool = {
+                                                let data_read = &ctx.data.read().await;
+                                                data_read.get::<DatabasePool>().unwrap().clone()
+                                            };
 
-                                        let guild_id = app_config
-                                            .application
-                                            .discord_guild_id
-                                            .parse::<u64>()
-                                            .expect("a number");
+                                            let guild_id = app_config
+                                                .application
+                                                .discord_guild_id
+                                                .parse::<u64>()
+                                                .expect("a number");
 
-                                        let mut owner = String::from("_not in Discord_");
+                                            let mut owner = String::from("_not in Discord_");
 
-                                        for address in identity.identity.primaryaddresses {
-                                            let query = query!("SELECT discord_user_id FROM user_register WHERE vrsc_address = $1", address.to_string());
-                                            if let Ok(result) = query.fetch_optional(&pool).await {
-                                                if let Some(record) = result {
-                                                    let discord_user_id = record.discord_user_id;
-                                                    if let Ok(member) = ctx
-                                                        .http
-                                                        .get_member(
-                                                            guild_id,
-                                                            discord_user_id as u64,
-                                                        )
-                                                        .await
-                                                    {
-                                                        owner = member.user.tag();
-                                                        break;
+                                            for address in identity.identity.primaryaddresses {
+                                                let query = query!("SELECT discord_user_id FROM user_register WHERE vrsc_address = $1", address.to_string());
+                                                if let Ok(result) =
+                                                    query.fetch_optional(&pool).await
+                                                {
+                                                    if let Some(record) = result {
+                                                        let discord_user_id =
+                                                            record.discord_user_id;
+                                                        if let Ok(member) = ctx
+                                                            .http
+                                                            .get_member(
+                                                                guild_id,
+                                                                discord_user_id as u64,
+                                                            )
+                                                            .await
+                                                        {
+                                                            owner = member.user.tag();
+                                                            break;
+                                                        }
                                                     }
                                                 }
                                             }
-                                        }
-                                        debug!("owner: {}", owner);
+                                            debug!("owner: {}", owner);
 
-                                        command
+                                            command
                                             .create_interaction_response(&ctx.http, |response| {
                                                 response.interaction_response_data(|data| {
                                                     data.embed(|e| {
@@ -138,7 +132,7 @@ impl EventHandler for Handler {
                                                                 "Metadata",
                                                                 format!(
                                                                 "[view](https://v2.viewblock.io/arweave/tx/{})",
-                                                                encoded_tx_hash_str
+                                                                &arweave_txid
                                                             ),
                                                                 true,
                                                             )
@@ -152,14 +146,17 @@ impl EventHandler for Handler {
                                             })
                                             .await
                                             .expect("a response to a /gecko interaction");
-                                    } else {
-                                        command
+                                        }
+                                        Err(e) => {
+                                            error!("{:?}", e);
+                                            command
                                             .create_interaction_response(&ctx.http, |response| {
                                                 response.interaction_response_data(|data| {
                                                     data.content("Conversion of metadata json failed. This is UBI and FUBAR")
                                                 })
                                             })
                                             .await.unwrap();
+                                        }
                                     }
                                 }
                                 Err(e) => match e.kind {

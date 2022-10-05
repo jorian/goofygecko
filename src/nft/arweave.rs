@@ -88,17 +88,24 @@ impl ArweaveTransaction {
     }
 }
 
-pub async fn get_transaction_by_identity(gecko_number: &str) -> String {
-    let identity = format!("{}.geckotest@", gecko_number);
+pub async fn get_transaction_by_gecko_number(gecko_number: i64) -> String {
+    let identity_name = format!("{}.geckotest@", gecko_number);
 
     let query = format!(
         r#"
     query {{
       transactions(
-        tags: {{
-          name: "identity",
-          values: ["{}"]
-        }}
+        owners:["{}"],
+        tags: [
+            {{
+                name: "vdxfid",
+                values: ["{}"]
+            }},
+            {{
+                name: "Content-Type",
+                values: ["application/json"]
+            }}
+        ]
       ) {{
         edges {{
           node {{
@@ -107,7 +114,7 @@ pub async fn get_transaction_by_identity(gecko_number: &str) -> String {
         }}
       }}
     }}"#,
-        identity
+        "8YMcuOtpKW9bAh3Jhzd5Pm9m3kw-32NJSr9M_YBP5pY", identity_name,
     );
 
     println!("{}", &query);
@@ -117,6 +124,8 @@ pub async fn get_transaction_by_identity(gecko_number: &str) -> String {
         .query_unwrap::<serde_json::Value>(&query)
         .await
         .unwrap();
+
+    debug!("graphql response: {:#?}", &data);
 
     let txid = &data["transactions"]["edges"]
         .as_array()
@@ -138,7 +147,11 @@ pub async fn get_metadata_json<'a>(tx_id: &'a str) -> Result<serde_json::Value, 
     // at this point we know the arweave tx is confirmed.
     debug!("getting metadata");
 
-    let res = req(&format!("https://arweave.net/tx/{}/data", tx_id)).await?;
+    let res = req(&format!(
+        "https://arweave.net/tx/{}/data",
+        tx_id.trim_matches('"')
+    ))
+    .await?;
     let base64_data = res.text().await?;
     debug!("base64_data: {:?}", base64_data);
     if base64_data.is_empty() {
@@ -152,10 +165,15 @@ pub async fn get_metadata_json<'a>(tx_id: &'a str) -> Result<serde_json::Value, 
 }
 
 pub async fn get_transaction_status(txid: &str) -> Result<serde_json::Value, ArweaveError> {
-    debug!("getting arweave transaction status");
+    debug!("getting arweave transaction status for {}", txid);
 
-    if let Ok(res) = req(&format!("https://arweave.net/tx/{}/status", txid)).await {
-        let json: serde_json::Value = res.json().await?;
+    if let Ok(res) = req(&format!(
+        "https://arweave.net/tx/{}/status",
+        txid.trim_matches('"')
+    ))
+    .await
+    {
+        let json = res.json().await?;
 
         Ok(json)
     } else {
@@ -165,6 +183,7 @@ pub async fn get_transaction_status(txid: &str) -> Result<serde_json::Value, Arw
 
 pub async fn get_transaction_confirmations(txid: &str) -> Result<i64, ArweaveError> {
     let transaction_status = get_transaction_status(txid).await?;
+    debug!("transaction status: {:?}", &transaction_status);
 
     if let Some(confs) = transaction_status["number_of_confirmations"].as_i64() {
         Ok(confs)
