@@ -46,6 +46,8 @@ pub struct VerusNFT {
     pub identity: Option<Identity>,
 }
 
+// an enum to keep track of where the process is, updating along the way
+// store the enum in case of failure somewhere, so catch it in the callee (events.rs) and write status to database
 impl VerusNFT {
     pub async fn generate(user_id: u64, app_config: &Settings) -> Self {
         let asset_config_location = format!("{}/config.json", &app_config.application.assets_dir);
